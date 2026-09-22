@@ -1,0 +1,44 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>SON VAPUR — promenade movement checks</title><style>#checks{position:fixed;top:0;left:0;z-index:100;background:#08141eee;color:#e1dbc4;padding:10px;font:11px monospace;max-width:520px}button{padding:6px}#results{white-space:pre-wrap}</style></head><body><main id="game"></main><aside id="checks"><button id="run">Run depth movement checks</button><button id="behind">Inspect behind bench</button><button id="front">Inspect in front of bench</button><div id="results">Ready. Tests use real keyboard events and isolated starting positions.</div></aside><script type="module">
+import {game} from '../src/main.ts';
+import {PIER_OBJECTS,WALK_AREA,FOOTPRINT} from '../src/scenes/promenade.ts';
+const output=document.querySelector('#results'),results=[];
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const event=(type,key,code,keyCode)=>window.dispatchEvent(new KeyboardEvent(type,{key,code,keyCode,which:keyCode,bubbles:true}));
+const keyData={w:['w','KeyW',87],s:['s','KeyS',83],a:['a','KeyA',65],d:['d','KeyD',68],up:['ArrowUp','ArrowUp',38],down:['ArrowDown','ArrowDown',40],left:['ArrowLeft','ArrowLeft',37],right:['ArrowRight','ArrowRight',39],e:['e','KeyE',69]};
+const scene=()=>game.scene.getScene('pier');
+function place(x,y){const p=scene().player;for(const data of Object.values(keyData))event('keyup',...data);p.x=x;p.y=y;p.velocity=0;p.velocityY=0;p.update(0);}
+async function hold(keys,ms){for(const key of keys)event('keydown',...keyData[key]);await wait(ms);for(const key of keys)event('keyup',...keyData[key]);await wait(220);}
+function check(condition,label){results.push(`${condition?'PASS':'FAIL'} ${label}`);output.textContent=results.join('\n');if(!condition)throw new Error(label);}
+document.querySelector('#behind').onclick=()=>place(866,522);
+document.querySelector('#front').onclick=()=>place(866,558);
+document.querySelector('#run').onclick=async()=>{
+ const buttons=[...document.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);
+ try{
+  const s=scene(),p=s.player;
+  for(const key of ['w','up','s','down']){place(617,575);await hold([key],650);check(key==='w'||key==='up'?p.y<550:p.y>600,`${key} moves on the slower depth axis`);check(Math.abs(p.x-617)<1,`${key} preserves horizontal position`);}
+  for(const key of ['a','left','d','right']){place(617,582);await hold([key],550);check(key==='a'||key==='left'?p.x<575:p.x>659,`${key} horizontal movement preserved`);}
+  place(617,575);await hold(['d','w'],700);const dx=p.x-617,dy=575-p.y;
+  check(Math.abs(dx/dy-105/55)<.1,'Diagonal proportions preserve slower Y speed');
+  check(Math.hypot(dx,dy)<105*.7,'Diagonal movement does not exceed straight-line speed');
+  place(617,575);await hold(['w','s'],350);check(Math.abs(p.y-575)<1,'Opposing depth keys cancel');
+  place(617,530);await hold(['up'],450);check(p.y===WALK_AREA.minY,'Cannot cross the rail edge toward the water');
+  place(617,621);await hold(['down'],450);check(p.y===WALK_AREA.maxY,'Cannot leave the promenade toward foreground equipment');
+  place(180,545);await hold(['w'],650);check(p.y===530,'Terminal entrance and steps remain solid');
+  for(const id of ['bench-0','lamp-0','bin','cabinet','reel','mooring']){
+   const object=PIER_OBJECTS.find(o=>o.id===id),box=object.footprint;
+   place((box.left+box.right)/2,box.bottom+FOOTPRINT.halfDepth+8);await hold(['w'],400);
+   check(p.y>=box.bottom+FOOTPRINT.halfDepth-.01,`${id} blocks the traveller’s feet`);
+  }
+  const bench=s.children.getByName('bench-0');
+  place(866,575);await hold(['w'],850);check(p.y===552&&p.visual.depth>bench.depth,'Bench stops approach; traveller renders in front');
+  place(770,522);await hold(['d'],950);check(p.x>850&&p.y===522&&p.visual.depth<bench.depth&&p.rim.depth<bench.depth,'Can walk behind bench with correct complete-character occlusion');
+  await hold(['s'],600);check(p.y===528,'Bench blocks approach from behind');
+  check(Math.abs(p.shadow.y-(p.y+1))<.01&&Math.abs(p.reflection.y-(p.y+4))<.01,'Shadow and reflection follow the feet in both axes');
+  check(s.cameras.main.scrollY===0,'Camera remains cinematic with no vertical follow');
+  place(866,628);await wait(400);check(s.interaction.prompt.alpha<.05,'Bench interaction respects depth distance');
+  place(866,558);await wait(400);check(s.interaction.prompt.alpha>.9,'Original bench prompt works nearby');
+  await hold(['e'],60);await wait(850);check(s.interaction.quote.alpha>.9,'Original bench line still works');
+  place(866,522);output.textContent+='\nCOMPLETE — all depth checks passed.';
+ }catch(error){output.textContent+='\nERROR '+error.message;}finally{for(const data of Object.values(keyData))event('keyup',...data);buttons.forEach(b=>b.disabled=false);}
+};
+</script></body></html>

@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>SON VAPUR — browser smoke checks</title><style>#checks{position:fixed;top:0;left:0;z-index:100;background:#08141eee;color:#e1dbc4;padding:10px;font:12px monospace;max-width:560px}button{padding:8px}#results{white-space:pre-wrap}</style></head><body><main id="game"></main><aside id="checks"><button id="run">Run playable scene checks</button><div id="results">Ready. These checks send keyboard events to the real Phaser scene.</div></aside><script type="module">
+import {game} from '../src/main.ts';
+import {PIER,SCENE_TIME,PARALLAX} from '../src/scenes/config.ts';
+const output=document.querySelector('#results');
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const event=(type,key,code,keyCode)=>window.dispatchEvent(new KeyboardEvent(type,{key,code,keyCode,which:keyCode,bubbles:true}));
+async function hold(key,code,keyCode,ms){event('keydown',key,code,keyCode);await wait(ms);event('keyup',key,code,keyCode);await wait(300);}
+const results=[];
+function check(condition,label){results.push(`${condition?'PASS':'FAIL'} ${label}`);output.textContent=results.join('\n');if(!condition)throw new Error(label);}
+document.querySelector('#run').onclick=async()=>{
+ document.querySelector('#run').disabled=true;
+ try{
+  const scene=game.scene.getScene('pier');const player=scene.player;
+  const start=player.x;
+  check(PIER.width>=PIER.viewWidth*1.5&&PIER.width<=PIER.viewWidth*2,'One continuous pier spans 1.5–2 screens');
+  check(Math.abs(player.visual.scaleX/.83-1.18)<.02,'Traveller enlarged by approximately 18%');
+  const sceneText=scene.children.list.filter(child=>child.type==='Text');
+  check(!sceneText.some(child=>child.text.includes('S O N')),'Persistent title removed');
+  check(sceneText.some(child=>child.text===SCENE_TIME&&child.scrollFactorX===0),'Clock uses shared time and stays screen-fixed');
+  check(scene.water.ferry.depth<scene.children.list.find(child=>child.texture?.key==='pier').depth,'Ferry and wake stay behind pier structures');
+  check(scene.water.ferry.scrollFactorX===PARALLAX.water,'Ferry shares the water parallax plane');
+
+  await hold('d','KeyD',68,700);check(player.x>start+45,'D moves right smoothly');
+  const right=player.x;await hold('a','KeyA',65,700);check(player.x<right-45&&player.facing===-1,'A moves left and changes facing');
+  await hold('ArrowRight','ArrowRight',39,700);check(player.x>start+40,'Right arrow moves right');
+  await hold('ArrowLeft','ArrowLeft',37,700);check(Math.abs(player.x-start)<18,'Left arrow moves left');
+  const stopped=player.x;event('keydown','a','KeyA',65);event('keydown','d','KeyD',68);await wait(400);event('keyup','a','KeyA',65);event('keyup','d','KeyD',68);check(Math.abs(player.x-stopped)<3,'Opposing keys cancel');
+  // Walk from the starting position to the actual bench, without moving the player directly.
+  await hold('a','KeyA',65,(player.x-PIER.benchX)/PIER.walkSpeed*1000);await wait(400);
+  check(scene.interaction.prompt.alpha>.9,'Bench prompt appears within range');
+  check(scene.cameras.main.scrollX>100&&scene.cameras.main.scrollX<300,'Camera follows gently along the quay');
+  check(scene.movementHint.alpha<.05,'Movement hint fades after walking');
+  check(scene.interaction.prompt.scrollFactorX===1&&scene.interaction.quote.scrollFactorX===0,'Bench prompt follows the world; quote stays screen-fixed');
+  event('keydown','e','KeyE',69);await wait(60);event('keyup','e','KeyE',69);await wait(1100);
+  check(scene.interaction.quote.alpha>.9&&scene.interaction.quote.text.includes('Şehir gece olunca başka türlü konuşuyor.'),'E shows the exact Turkish line');
+  await wait(5200);check(scene.interaction.quote.alpha<.05,'Line fades out after one reading');
+  await hold('d','KeyD',68,(PIER.maxX-player.x)/PIER.walkSpeed*1000+700);check(player.x===PIER.maxX,'Right world boundary holds');check(scene.interaction.prompt.alpha<.05,'Prompt hides away from bench');
+  check(Math.abs(scene.cameras.main.scrollX-(PIER.width-PIER.viewWidth))<1,'Camera stops at the right scene boundary');
+  await hold('a','KeyA',65,(PIER.maxX-PIER.minX)/PIER.walkSpeed*1000+700);check(player.x===PIER.minX,'Left world boundary holds');
+  check(scene.cameras.main.scrollX<1,'Camera returns to the left scene boundary');
+  const fps=game.loop.actualFps;check(fps>35,`Browser animation loop: ${fps.toFixed(1)} fps`);
+  output.textContent+='\nCOMPLETE — all scene checks passed.';
+ }catch(error){output.textContent+='\nERROR '+error.message;}finally{for(const [key,code,n] of [['a','KeyA',65],['d','KeyD',68],['e','KeyE',69],['ArrowLeft','ArrowLeft',37],['ArrowRight','ArrowRight',39]])event('keyup',key,code,n);}
+};
+</script></body></html>
