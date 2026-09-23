@@ -6,7 +6,7 @@ import {join,resolve} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 const output=mkdtempSync(join(tmpdir(),'son-vapur-movement-'));
-execFileSync(process.execPath,['node_modules/typescript/bin/tsc','--target','ES2022','--module','commonjs','--skipLibCheck','--outDir',output,'src/entities/movement.ts','src/scenes/ferryConfig.ts','src/scenes/karakoyConfig.ts','src/systems/FerryJourney.ts']);
+execFileSync(process.execPath,['node_modules/typescript/bin/tsc','--target','ES2022','--module','commonjs','--skipLibCheck','--outDir',output,'src/entities/movement.ts','src/scenes/ferryConfig.ts','src/scenes/karakoyConfig.ts','src/scenes/galataBridgeConfig.ts','src/systems/FerryJourney.ts']);
 const require=createRequire(import.meta.url);
 const {moveOnPromenade, movementTarget}=require(join(output,'entities/movement.js'));
 const {OBSTACLES,PIER_OBJECTS,WALK_AREA,FOOTPRINT,promenadeDepth}=require(join(output,'scenes/promenade.js'));
@@ -85,7 +85,19 @@ test('ferry deck stays bounded and every prop blocks approach',()=>{
  }
 });
 
-const {STREET_BOUNDS,STREET_OBSTACLES,STREET_LOOKS}=require(join(output,'scenes/karakoyConfig.js'));
+const {STREET_BOUNDS,STREET_OBSTACLES,STREET_LOOKS,ARRIVAL_PATH,KARAKOY,BRIDGE_EXIT}=require(join(output,'scenes/karakoyConfig.js'));
+test('Karaköy arrival walk leaves the terminal door through open ground and ends at the lane spawn',()=>{
+ const last=ARRIVAL_PATH.at(-1);
+ assert.deepEqual(last,{x:KARAKOY.startX,y:KARAKOY.startY});
+ for(let i=1;i<ARRIVAL_PATH.length;i++){
+  const a=ARRIVAL_PATH[i-1],b=ARRIVAL_PATH[i];
+  for(let t=0;t<=1;t+=.02){
+   const x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
+   assert.ok(x>=STREET_BOUNDS.minX&&x<=STREET_BOUNDS.maxX&&y>=STREET_BOUNDS.minY&&y<=STREET_BOUNDS.maxY);
+   for(const o of STREET_OBSTACLES)assert.ok(!(x>o.left-FOOTPRINT.halfWidth&&x<o.right+FOOTPRINT.halfWidth&&y>o.top-FOOTPRINT.halfDepth&&y<o.bottom+FOOTPRINT.halfDepth),o.id);
+  }
+ }
+});
 test('Karaköy route, three observations and closed uphill boundary stay accessible and solid',()=>{
  const move=(x,y,dx,dy)=>moveOnPromenade(x,y,dx,dy,STREET_OBSTACLES,STREET_BOUNDS);
  let p={x:220,y:592};
@@ -115,4 +127,33 @@ test('ferry allows exploration, eases into port, docks and never skips on resume
  const docked=trip.distance;for(let i=0;i<100;i++)trip.update(.05);assert.equal(trip.distance,docked);
  const sixty=new FerryJourney();for(let i=0;i<48*60+1;i++)sixty.update(1/60);
  assert.equal(sixty.phase,'moored');assert.ok(Math.abs(sixty.distance-trip.distance)<1e-8);
+});
+
+test('Karaköy lane end leads to the bridge without catching the ferry arrival walk',()=>{
+ const end=moveOnPromenade(220,600,-400,0,STREET_OBSTACLES,STREET_BOUNDS);
+ assert.equal(end.x,STREET_BOUNDS.minX);
+ assert.ok(Math.hypot(end.x-BRIDGE_EXIT.x,end.y-BRIDGE_EXIT.y)<BRIDGE_EXIT.radius);
+ for(const p of ARRIVAL_PATH)assert.ok(Math.hypot(p.x-BRIDGE_EXIT.x,p.y-BRIDGE_EXIT.y)>BRIDGE_EXIT.radius);
+});
+const {BRIDGE,BRIDGE_BOUNDS,BRIDGE_OBSTACLES,BRIDGE_LOOKS}=require(join(output,'scenes/galataBridgeConfig.js'));
+test('Galata Bridge stays bounded, footprints are solid and all three looks are reachable',()=>{
+ const move=(x,y,dx,dy)=>moveOnPromenade(x,y,dx,dy,BRIDGE_OBSTACLES,BRIDGE_BOUNDS);
+ assert.equal(move(1000,600,0,-1000).y,BRIDGE_BOUNDS.minY);
+ assert.equal(move(1000,600,0,1000).y,BRIDGE_BOUNDS.maxY);
+ assert.equal(move(1800,600,10000,0).x,BRIDGE_BOUNDS.maxX);
+ assert.equal(move(1800,600,-10000,0).x,BRIDGE_BOUNDS.minX);
+ for(const box of BRIDGE_OBSTACLES.filter(b=>(b.left+b.right)/2>=BRIDGE_BOUNDS.minX)){
+  const x=(box.left+box.right)/2;
+  assert.ok(move(x,625,0,-500).y>=Math.max(BRIDGE_BOUNDS.minY,box.bottom+FOOTPRINT.halfDepth),box.id);
+ }
+ for(const point of BRIDGE_LOOKS){const near=move(point.x,600,0,-200);assert.ok(Math.hypot(near.x-point.x,near.y-point.y)<point.radius,point.id);}
+ assert.equal(move(600,530,200,0).x,800,'behind the fisherman standing back from the rail');
+ assert.equal(move(600,600,200,0).x,800,'in front of him');
+ assert.equal(move(260,530,100,0).x,306-FOOTPRINT.halfWidth,'the fisherman at the rail blocks the rail edge');
+ assert.equal(move(1240,600,0,-100).y,552,'bench');
+});
+test('Bridge walk-in starts beyond the Karaköy edge and crosses open walkway',()=>{
+ assert.ok(BRIDGE.entryX>BRIDGE_BOUNDS.maxX&&BRIDGE.startX<=BRIDGE_BOUNDS.maxX);
+ for(let x=BRIDGE.startX;x<=BRIDGE.entryX;x+=2)for(const o of BRIDGE_OBSTACLES)
+  assert.ok(!(x>o.left-FOOTPRINT.halfWidth&&x<o.right+FOOTPRINT.halfWidth&&BRIDGE.startY>o.top-FOOTPRINT.halfDepth&&BRIDGE.startY<o.bottom+FOOTPRINT.halfDepth),o.id);
 });

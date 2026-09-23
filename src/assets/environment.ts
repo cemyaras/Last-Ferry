@@ -81,7 +81,7 @@ function mooring(c:Ctx){
   c.strokeStyle='#6f6d575e';c.lineWidth=2;c.beginPath();c.ellipse(358,544,17,4,-.2,0,Math.PI*2);c.stroke();
 }
 
-function mosque(c:Ctx,x:number,y:number,s:number){c.save();c.translate(x,y);c.scale(s,s);const ink='#192e38';
+export function mosque(c:Ctx,x:number,y:number,s:number){c.save();c.translate(x,y);c.scale(s,s);const ink='#192e38';
  c.fillStyle=ink;c.fillRect(-75,-30,150,42);c.fillRect(-40,-62,80,65);
  dome(c,0,-64,37,ink);dome(c,-34,-45,25,ink);dome(c,34,-45,25,ink);dome(c,-61,-25,18,ink);dome(c,61,-25,18,ink);
  for(let dx=-66;dx<=66;dx+=22){dome(c,dx,-6,10,ink);line(c,dx-9,0,dx-9,13,'#63726d25');}
@@ -122,10 +122,10 @@ function terminal(c:Ctx){
  // Suspended departure plaque.
  line(c,316,377,316,402,'#101c24',2);line(c,362,377,362,402,'#101c24',2);c.fillStyle='#16282f';c.fillRect(302,400,76,47);c.strokeStyle='#69756b';c.strokeRect(302,400,76,47);label(c,'SON VAPUR',309,417,8,'#abb1a2');label(c,SCENE_TIME,316,435,15,'#c0b58a','Georgia');
 }
-function bench(c:Ctx,x:number,y:number){c.save();c.translate(x,y);ellipse(c,42,5,62,5,'#08141e55');for(let i=0;i<4;i++){polygon(c,[[0,-34+i*6],[91,-34+i*6],[92,-30+i*6],[1,-30+i*6]],'#4b4b40');line(c,1,-34+i*6,90,-34+i*6,'#83827263');}
+export function bench(c:Ctx,x:number,y:number){c.save();c.translate(x,y);ellipse(c,42,5,62,5,'#08141e55');for(let i=0;i<4;i++){polygon(c,[[0,-34+i*6],[91,-34+i*6],[92,-30+i*6],[1,-30+i*6]],'#4b4b40');line(c,1,-34+i*6,90,-34+i*6,'#83827263');}
  polygon(c,[[-5,-9],[93,-9],[104,-2],[-11,-2]],'#414239');line(c,-10,-2,103,-2,'#8d8a6d65');
  for(const bx of [7,81]){line(c,bx,-33,bx,8,'#0c1a22',4);line(c,bx,-3,bx-6,11,'#0c1a22',4);c.strokeStyle='#1c2b32';c.lineWidth=3;c.beginPath();c.moveTo(bx-7,-4);c.lineTo(bx-7,-17);c.quadraticCurveTo(bx,-25,bx+9,-17);c.lineTo(bx+9,-6);c.stroke();}c.restore();}
-function lamp(c:Ctx,x:number,y:number){
+export function lamp(c:Ctx,x:number,y:number){
  line(c,x,y+9,x,516,'#0a1922',6);line(c,x+2,y+20,x+2,510,'#526269',1);
  polygon(c,[[x-9,517],[x-6,505],[x-4,497],[x+4,497],[x+6,505],[x+9,517]],'#10212a','#3e4e55');
  c.strokeStyle='#15252d';c.lineWidth=3;c.beginPath();c.moveTo(x,y+32);c.bezierCurveTo(x-28,y+15,x-25,y-3,x-2,y-7);c.stroke();

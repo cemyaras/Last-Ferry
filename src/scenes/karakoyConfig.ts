@@ -1,6 +1,13 @@
 import type {Obstacle} from './promenade';
 
 export const KARAKOY={width:1920,height:720,startX:220,startY:592};
+/** Arriving passengers step out of the lit terminal door onto the lane. */
+export const ARRIVAL_PATH=[{x:168,y:546},{x:192,y:572},{x:KARAKOY.startX,y:KARAKOY.startY}];
+/** The dock behind the terminal, its open side door hidden by the building. */
+export const MOORED_FERRY={x:318,y:494,scale:.82};
+/** The lane's left end, past the terminal, continues onto Galata Bridge. */
+export const BRIDGE_EXIT={x:118,y:600,radius:52};
+export const BRIDGE_EXIT_WALK_X=-36;
 export const STREET_BOUNDS={minX:96,maxX:1778,minY:522,maxY:635};
 export const STREET_LIGHTS=[{x:315,y:337},{x:782,y:319},{x:1225,y:297},{x:1670,y:278}];
 export const STREET_OBSTACLES:Obstacle[]=[

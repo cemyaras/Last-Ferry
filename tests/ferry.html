@@ -40,8 +40,13 @@ document.querySelector('#run').onclick=async()=>{
   check(s.interactions.prompt.alpha===0&&s.interactions.line.alpha===0,'Interaction UI clears as disembarkation begins');
   check(s.scene.isActive()&&p.visual.visible,'Traveller remains visible during the exit fade');
   await hold('e',60);check(arrivals===1,'Repeated input cannot duplicate handoff');game.events.off('karakoy-arrival',onArrival);
-  await wait(1800);check(game.scene.isActive('KarakoyScene')&&!s.scene.isActive(),'Exit reaches playable Karaköy');
+  while(!game.scene.isActive('KarakoyScene'))await wait(50);await wait(150);
+  check(game.scene.isActive('KarakoyScene')&&!s.scene.isActive(),'Exit reaches playable Karaköy');
   check(game.scene.getScenes(true).length===1,'Only Karaköy remains active');
+  const k=game.scene.getScene('KarakoyScene'),kp=k.player;
+  check(kp.boardingTarget&&kp.x<219,'Traveller steps out of the Karaköy terminal door');
+  await wait(2200);check(!kp.boardingTarget&&Math.abs(kp.x-220)<1&&Math.abs(kp.y-592)<1,'Arrival walk ends on the lane');
+  const kx=kp.x;await hold('d',500);check(kp.x>kx+30,'Karaköy controls resume after arrival');
   output.textContent+='\nCOMPLETE — all ferry checks passed.';
  }catch(error){output.textContent+='\nERROR '+error.message;}finally{for(const k of Object.keys(data))key('keyup',k);}
 };

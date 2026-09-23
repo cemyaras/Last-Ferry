@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import {type Ctx,texture,random,polygon,line,ellipse,glow,label} from '../utils/drawing';
-import {KARAKOY,STREET_LIGHTS} from '../scenes/karakoyConfig';
+import {KARAKOY,STREET_LIGHTS,MOORED_FERRY} from '../scenes/karakoyConfig';
 import {promenadeDepth} from '../scenes/promenade';
+import {createMooredFerryTexture} from './boarding';
 
 /** The same waterfront silhouettes appear from the arriving boat and on shore. */
 export function createKarakoyWaterfront(scene:Phaser.Scene){
@@ -131,4 +132,18 @@ export function createKarakoy(scene:Phaser.Scene){
   for(const x of [77,1361]){line(c,x,659,x,716,'#0a1d27',7);ellipse(c,x,658,7,3,'#52695d');}
  });
  scene.add.image(0,0,'karakoy-foreground').setOrigin(0).setDepth(35).setScrollFactor(1.025);
+ // Direction plate on the first lamp, and bridge lamplight spilling in from the left edge.
+ texture(scene,'karakoy-bridge-sign',128,34,c=>{
+  line(c,0,10,8,10,'#102733',3);line(c,0,26,8,26,'#102733',3);
+  c.fillStyle='#14303a';c.fillRect(8,2,118,30);c.strokeStyle='#72857a';c.strokeRect(8.5,2.5,117,29);
+  label(c,'← GALATA KÖPRÜSÜ',15,15,9,'#cdc7a6','sans-serif',.5);label(c,'EMİNÖNÜ',15,27,8,'#95a79f','sans-serif',1.2);
+ });
+ scene.add.image(STREET_LIGHTS[0].x+2,372,'karakoy-bridge-sign').setOrigin(0).setDepth(promenadeDepth(529)+.001);
+ texture(scene,'karakoy-bridge-approach',260,200,c=>{c.save();c.translate(10,100);c.scale(1,.3);glow(c,0,0,130,'#d7b66a24');c.restore();});
+ scene.add.image(0,500,'karakoy-bridge-approach').setOrigin(0).setDepth(12);
+ // The same vessel the traveller crossed on, now tied up behind the terminal.
+ createMooredFerryTexture(scene);
+ const ferry=scene.add.image(MOORED_FERRY.x,MOORED_FERRY.y,'karakoy-ferry').setOrigin(.5,1).setScale(MOORED_FERRY.scale).setDepth(7).setTint(0xaab8b0);
+ const ropes=scene.add.graphics().setDepth(8);ropes.lineStyle(1,0x8a8a69,.45);ropes.lineBetween(MOORED_FERRY.x+118,478,MOORED_FERRY.x+136,500);
+ return ferry;
 }

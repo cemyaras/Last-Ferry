@@ -1,0 +1,70 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>SON VAPUR — Galata Bridge checks</title><style>#checks{position:fixed;z-index:100;top:0;left:0;background:#091b25db;padding:8px;color:#dbd6b9;font:11px monospace;max-width:520px}button{padding:6px}#results{white-space:pre-wrap}</style></head><body><main id="game"></main><aside id="checks"><button id="open">Open bridge</button><button id="handoff">Karaköy → bridge</button><button id="run" disabled>Run bridge checks</button><button id="middle" disabled>Inspect middle</button><button id="barrier" disabled>Inspect barrier</button><div id="results">Ready.</div></aside><script type="module">
+import {game} from '../src/main.ts';
+import {BRIDGE,BRIDGE_BOUNDS,BRIDGE_LOOKS} from '../src/scenes/galataBridgeConfig.ts';
+import {BRIDGE_EXIT} from '../src/scenes/karakoyConfig.ts';
+const output=document.querySelector('#results'),results=[];
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const keys={a:['a','KeyA',65],d:['d','KeyD',68],w:['w','KeyW',87],s:['s','KeyS',83],e:['e','KeyE',69],left:['ArrowLeft','ArrowLeft',37],up:['ArrowUp','ArrowUp',38]};
+function key(type,name){const [key,code,keyCode]=keys[name];window.dispatchEvent(new KeyboardEvent(type,{key,code,keyCode,which:keyCode,bubbles:true}));}
+async function hold(names,ms){for(const n of [].concat(names))key('keydown',n);await wait(ms);for(const n of [].concat(names))key('keyup',n);await wait(240);}
+function check(ok,label){results.push((ok?'PASS ':'FAIL ')+label);output.textContent=results.join('\n');if(!ok)throw new Error(label);}
+const scene=()=>game.scene.getScene('GalataBridgeScene');
+function place(x,y){const s=scene(),p=s.player;for(const k of Object.keys(keys))key('keyup',k);p.x=x;p.y=y;p.velocity=0;p.velocityY=0;p.update(0);s.cameras.main.scrollX=Math.max(0,Math.min(BRIDGE.width-1280,x-640));}
+const enable=()=>document.querySelectorAll('button:not(#open):not(#handoff)').forEach(b=>b.disabled=false);
+document.querySelector('#open').onclick=async()=>{game.scene.stop('pier');game.scene.start('GalataBridgeScene');await wait(300);enable();output.textContent='Bridge open. WASD / arrows; E to look.';};
+document.querySelector('#middle').onclick=()=>place(BRIDGE.midX,560);
+document.querySelector('#barrier').onclick=()=>place(BRIDGE_BOUNDS.minX,590);
+document.querySelector('#handoff').onclick=async()=>{
+ document.querySelectorAll('button').forEach(b=>b.disabled=true);
+ try{
+  game.scene.stop('pier');game.scene.start('KarakoyScene');await wait(400);
+  const k=game.scene.getScene('KarakoyScene'),kp=k.player;
+  for(const n of Object.keys(keys))key('keyup',n);kp.x=260;kp.y=600;kp.velocity=0;kp.velocityY=0;kp.update(0);
+  await hold('a',1700);
+  check(kp.x<=BRIDGE_EXIT.x+BRIDGE_EXIT.radius&&k.interaction.prompt.text.includes('Galata')&&k.interaction.prompt.alpha>.5,'Karaköy shows the bridge prompt at the left end');
+  await hold('e',60);check(k.leaving&&kp.boardingTarget,'E starts the walk toward the bridge');
+  await hold('e',60);
+  while(!game.scene.isActive('GalataBridgeScene'))await wait(50);await wait(150);
+  const s=scene(),p=s.player;
+  check(game.scene.getScenes(true).length===1,'Only the bridge remains active');
+  check(p.boardingTarget&&p.x>BRIDGE.startX,'Traveller walks in from the Karaköy end');
+  while(p.boardingTarget)await wait(50);await wait(200);
+  check(p.x===BRIDGE.startX&&p.y===BRIDGE.startY&&p.facing===-1,'Walk-in ends on the walkway facing Eminönü');
+  const x=p.x;await hold('left',500);check(p.x<x-30,'Controls resume after the walk-in');
+  enable();output.textContent+='\nCOMPLETE — handoff checks passed.';
+ }catch(e){output.textContent+='\nERROR '+e.message;}finally{for(const n of Object.keys(keys))key('keyup',n);}
+};
+document.querySelector('#run').onclick=async()=>{
+ document.querySelectorAll('button').forEach(b=>b.disabled=true);results.length=0;
+ try{
+  const s=scene(),p=s.player,obj=name=>s.children.getByName(name);
+  place(1500,600);await hold(['a','w'],700);const dx=1500-p.x,dy=600-p.y;check(Math.abs(dx/dy-105/55)<.12,`Diagonal keeps the slower depth axis (${dx.toFixed(1)} × ${dy.toFixed(1)})`);
+  place(1770,560);await hold('up',1500);check(p.y===BRIDGE_BOUNDS.minY,'Railing stops the traveller at the rail edge');
+  place(1770,600);await hold('s',1500);check(p.y===BRIDGE_BOUNDS.maxY,'Kerb keeps the traveller off the tram road');
+  place(2060,600);await hold('d',900);check(p.x===BRIDGE_BOUNDS.maxX,'Karaköy end is bounded');
+  place(300,600);await hold('a',1400);check(p.x===BRIDGE_BOUNDS.minX,'Eminönü barrier blocks the walkway');
+  check(obj('barrier-0').getBounds().right<p.x-12,'Barrier panels stay clear of the traveller at the boundary');
+  place(656,600);await hold('w',1500);check(p.y===559,'Talk fisherman has a solid footprint');
+  place(600,530);await hold('d',1300);check(p.x>700&&p.y===530,'Traveller can pass behind the fisherman standing back from the rail');
+  place(656,530);await wait(120);check(p.visual.depth<obj('fisher-talk').depth,'Passing behind renders behind him');
+  place(656,600);await wait(120);check(p.visual.depth>obj('fisher-talk').depth,'Passing in front renders in front');
+  place(318,600);await hold('w',1500);check(p.y===540,'Fisherman at the rail cannot be walked through');
+  place(1556,600);await hold('w',1500);check(p.y===550,'Seated fisherman and stool are solid');
+  place(1240,600);await hold('w',1500);check(p.y===552,'Bench blocks approach from the front');
+  place(1150,524);await hold('d',1800);check(p.x>1300&&p.visual.depth<obj('bridge-bench').depth,'Traveller can slip behind the bench and is occluded');
+  place(1345,600);await hold('w',1500);check(p.y===539,'Umbrella pedestrian has a footprint');
+  const look=async(point,text)=>{place(point.x,point.y);await wait(420);check(s.interaction.prompt.alpha>.9&&s.interaction.prompt.text===(point.prompt??'[E]  Bak'),`${point.id} prompt reads ${point.prompt??'[E]  Bak'}`);await hold('e',60);await wait(1000);check(s.interaction.quote.alpha>.9&&s.interaction.quote.text.includes(text),`${point.id} line displays`);};
+  const [railing,middle,fisher]=BRIDGE_LOOKS;
+  await look(railing,'Karşı kıyı');while(s.interaction.showing)await wait(100);
+  place(railing.x,600);await wait(420);check(s.interaction.prompt.alpha<.05,'Railing look needs the traveller at the railing');
+  await look(fisher,'sabır');while(s.interaction.showing)await wait(100);
+  await look(middle,'İki yaka');
+  check(s.cameras.main.zoom<.95,'Middle of the bridge widens the view');
+  const quote=s.interaction.quote.getBounds();check(Math.abs(quote.centerX-640)<2&&quote.bottom<720,'Screen text stays fixed while zoomed');
+  while(s.interaction.showing||s.widening)await wait(100);await wait(300);
+  check(s.cameras.main.zoom===1&&s.children.list.find(o=>o.texture?.key==='sky').scaleX===1,'Camera and screen layers settle back');
+  check(s.cameras.main.scrollY===0,'Camera stays horizontal');
+  output.textContent+='\nCOMPLETE — all bridge checks passed.';
+ }catch(e){output.textContent+='\nERROR '+e.message;}finally{for(const k of Object.keys(keys))key('keyup',k);enable();}
+};
+</script></body></html>

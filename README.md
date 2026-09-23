@@ -2,7 +2,7 @@
 
 🎮 **[Play on GitHub Pages](https://cemyaras.github.io/Last-Ferry/)**
 
-A small atmospheric journey from Kadıköy ferry pier through a Bosphorus crossing to the first Karaköy lane, at night. Built with TypeScript, Phaser 3 and Vite. Opens directly into the scene, with no menus or external assets.
+A small atmospheric journey from Kadıköy ferry pier through a Bosphorus crossing to the first Karaköy lane and onto Galata Bridge, at night. Built with TypeScript, Phaser 3 and Vite. Opens directly into the scene, with no menus or external assets.
 
 ## 🏃‍♂️ Run
 
@@ -17,8 +17,9 @@ Open the localhost URL printed by Vite. Click the scene if the browser has not g
 - **W / S** or **↑ / ↓** — move toward / away from the water within the shallow promenade
 - **E** near the bench — look out over the water
 - **E** at the left-side boarding bridge — board the Karaköy ferry
+- **E** at the left end of the Karaköy lane — walk onto Galata Bridge
 
-You begin at the right end of the promenade, facing left toward the ferry terminal. Follow the left-pointing İSKELE sign; the original bench reflection remains available along the way. Walk left to the terminal and approach the bridge marked KARAKÖY. Press E to walk aboard the waiting ferry. Boarding fades into the playable FerryScene. Explore its open deck with the same controls and look out at the water. After a 30-second cruise, the Karaköy waterfront emerges during a 14-second approach, followed by four seconds of docking. When “Karaköy’e yanaştık.” appears, use E at the right-hand exit to step ashore. The small Karaköy lane remains freely explorable up to its closed uphill gate. Reload the page to replay from Kadıköy. The continuous pier is 2112 pixels wide (1.65 screens), with a gently following camera and depth-dependent parallax. Feet stay within a 106-pixel promenade depth band; depth movement is slower and diagonals are normalized. The terminal, rail edge and furniture have solid footprints. Furniture and the traveller sort by ground contact Y, while the camera remains horizontal. The scene is designed for desktop keyboards and scales to fit the window with cinematic letterboxing. Movement guidance fades after walking; the clock and terminal sign share the fixed 23:40 scene time.
+You begin at the right end of the promenade, facing left toward the ferry terminal. Follow the left-pointing İSKELE sign; the original bench reflection remains available along the way. Walk left to the terminal and approach the bridge marked KARAKÖY. Press E to walk aboard the waiting ferry. Boarding fades into the playable FerryScene. Explore its open deck with the same controls and look out at the water. After a 30-second cruise, the Karaköy waterfront emerges during a 14-second approach, followed by four seconds of docking. When “Karaköy’e yanaştık.” appears, use E at the right-hand exit to step ashore. The small Karaköy lane remains freely explorable up to its closed uphill gate; at its left end, past the terminal, a lamp plate points to Galata Bridge. Reload the page to replay from Kadıköy. The continuous pier is 2112 pixels wide (1.65 screens), with a gently following camera and depth-dependent parallax. Feet stay within a 106-pixel promenade depth band; depth movement is slower and diagonals are normalized. The terminal, rail edge and furniture have solid footprints. Furniture and the traveller sort by ground contact Y, while the camera remains horizontal. The scene is designed for desktop keyboards and scales to fit the window with cinematic letterboxing. Movement guidance fades after walking; the clock and terminal sign share the fixed 23:40 scene time.
 
 ```sh
 npm run build   # TypeScript check and production bundle
@@ -32,6 +33,11 @@ npm run preview
 - `src/scenes/KarakoyScene.ts` — first waterfront lane and shared-system composition
 - `src/scenes/karakoyConfig.ts` — street bounds, solid footprints, lights and three observations
 - `src/assets/karakoy.ts` — original street art and the waterfront seen during arrival
+- `src/scenes/GalataBridgeScene.ts` — bridge composition, walk-in, camera and the brief wide view
+- `src/scenes/galataBridgeConfig.ts` — walkway bounds, footprints, lamps, fishermen and three observations
+- `src/assets/galataBridge.ts` — skylines, railing, walkway, opening span, barrier and tram road art
+- `src/entities/BridgeLocals.ts` — three fishermen, an umbrella pedestrian, rods and lines
+- `src/systems/BridgeMotion.ts` — tram, car lights, flag, far ferry, circling gulls and barrier lamps
 - `src/systems/FerryJourney.ts` — active-time cruise, smooth approach and docking phases
 - `src/scenes/ferryConfig.ts` — deck bounds, footprints, lights and crossing duration
 - `src/scenes/config.ts` — dimensions, movement bounds, interaction position, lamps, shared scene time and parallax
@@ -43,7 +49,7 @@ npm run preview
 - `src/systems/Atmosphere.ts` — three light rain layers, ripples, animated wet reflections, clouds, haze, rare lamp flicker and distant gulls
 - `src/systems/Boarding.ts` — proximity prompt, single boarding path, and transition into FerryScene
 - `src/assets/boarding.ts` — moored ferry, doorway, bridge and destination sign
-- `src/systems/Interaction.ts` — one proximity prompt and fading line
+- `src/systems/Interaction.ts` — proximity prompts with optional per-point label and callback, and a fading line
 - `src/systems/Ambience.ts` — optional future audio channels
 - `src/utils/drawing.ts` — reusable drawing and seeded randomness helpers
 - `public/assets/` — reserved for future original audio files
@@ -56,7 +62,7 @@ The arrival has one quiet, procedurally synthesized two-tone ferry horn. Audio u
 
 ## 🎯 Scope
 
-Kadıköy pier, one compact ferry deck and a 1920-pixel (1.5-screen) Karaköy lane. The deck has two passengers; the street has a waiting resident and a shopkeeper, plus three brief observations. No quests, inventory, saves, combat, menus, dialogue trees or additional districts.
+Kadıköy pier, one compact ferry deck, a 1920-pixel (1.5-screen) Karaköy lane and a 2176-pixel (1.7-screen) stretch of Galata Bridge. The deck has two passengers; the street has a waiting resident and a shopkeeper; the bridge has three fishermen and one pedestrian. Each location offers at most three brief observations. Eminönü is not built yet. No quests, inventory, saves, combat, menus or dialogue trees.
 
 ## 🧪 Browser verification
 
@@ -80,6 +86,12 @@ The deck keeps its existing layout and collision footprints. Its artwork now inc
 
 ## Karaköy lane
 
-Walk right from the terminal through the older shopfronts. Warm lamps, a Galata sign and the receding stairs guide the way. E offers one line each at the terminal, closed clock shop and uphill gate. The locked stair gate and end wall mark the current content boundary. The street uses the existing player, foot collisions, Y sorting, observation UI, rain and reflection systems with scene-specific configuration.
+Arriving from the ferry, the traveller steps out of the lit terminal door along a short authored path before normal controls resume; the same Karaköy-bound ferry stays moored behind the terminal. Walk right from the terminal through the older shopfronts. Warm lamps, a Galata sign and the receding stairs guide the way. E offers one line each at the terminal, closed clock shop and uphill gate. The locked stair gate and end wall mark the current content boundary. The street uses the existing player, foot collisions, Y sorting, observation UI, rain and reflection systems with scene-specific configuration.
 
 `/tests/journey.html` runs the entire route from the actual Kadıköy spawn, boards the ferry, explores its deck, waits through the unaccelerated approach and docking, disembarks, and walks through all three street observations and the end boundary. Keep the test tab active; it takes about two minutes. `/tests/karakoy.html` provides inspection buttons for the uphill gate and both sides of the planter. `npm test` also checks street collision/accessibility and arrival phase/frame-rate invariants.
+
+## Galata Bridge
+
+The traveller walks in from the Karaköy end and heads west toward Eminönü, looking up the Golden Horn: Yeni Cami and Süleymaniye ahead, Galata Tower behind. The walkway runs along a baluster railing, with fishermen, buckets, a bench and the opening span's two control houses at the middle. Rain slants harder and gusts; the flag, umbrella and fishing lines move with the same gusts. The T1 tram and car lights pass on the road nearer the viewer, below the playable strip. E offers three things: a look over the railing, a line from the fisherman standing back from the rail, and, at the opening span, a brief camera widening that holds both shores before settling back. Screen-fixed sky, rain, vignette and type are compensated during the zoom so they do not shrink. Work barriers with slow amber lamps close the walkway at the Eminönü end. `Atmosphere` accepts an optional `wind`; other scenes keep their original rain.
+
+`/tests/bridge.html` checks the Karaköy handoff and walk-in, diagonal movement, rail, kerb and both ends, footprints of every fisherman, prop and the pedestrian, front/behind sorting, all three prompts and lines, and the wide view returning to normal. `/tests/journey.html` now continues from Karaköy onto the bridge.

@@ -1,7 +1,10 @@
 import Phaser from 'phaser';
 import {texture,random,glow,polygon,line} from '../utils/drawing';
 import {LAMPS,PIER} from '../scenes/config';
-export interface AtmosphereEnvironment{width:number;lamps:readonly {x:number;y:number}[];texturePrefix:string;terminalGlow?:boolean;}
+/** Slow wind gusts shared by rain and any wind-driven scene detail. */
+export function windGust(t:number){return 1+Math.sin(t*.23)*.28+Math.sin(t*.71+1)*.12;}
+/** `wind` is the horizontal rain drift per unit fall speed; when set, it also gusts gently. */
+export interface AtmosphereEnvironment{width:number;lamps:readonly {x:number;y:number}[];texturePrefix:string;terminalGlow?:boolean;wind?:number;}
 export class Atmosphere{
  private rain:Phaser.GameObjects.Graphics[];
  private wetLight:Phaser.GameObjects.Graphics;
@@ -49,7 +52,8 @@ export class Atmosphere{
  }
  update(dt:number){this.elapsed+=dt;const t=this.elapsed;this.clouds.x=-160+Math.sin(t*.018)*90;this.haze.x=-110+Math.sin(t*.04)*32;
   for(const layer of this.rain)layer.clear();
-  for(const d of this.drops){d.y+=d.speed*dt;d.x-=d.speed*.12*dt;if(d.y>745){d.y=-20;d.x=(d.x+421)%1340;}if(d.x< -10)d.x=1300;const g=this.rain[d.layer];g.lineStyle(.45+d.layer*.22,0xb8ced3,d.alpha);g.lineBetween(d.x,d.y,d.x-1.6-d.layer,d.y+d.length);}
+  const wind=this.environment.wind,drift=wind?wind*windGust(t):.12,slant=drift/.12;
+  for(const d of this.drops){d.y+=d.speed*dt;d.x-=d.speed*drift*dt;if(d.y>745){d.y=-20;d.x=(d.x+421)%1340;}if(d.x< -10)d.x=1300;const g=this.rain[d.layer];g.lineStyle(.45+d.layer*.22,0xb8ced3,d.alpha);g.lineBetween(d.x,d.y,d.x-(1.6+d.layer)*slant,d.y+d.length);}
   this.wetLight.clear();
   this.environment.lamps.forEach(({x},i)=>{
    // A rare, small voltage dip; no regular pulsing.

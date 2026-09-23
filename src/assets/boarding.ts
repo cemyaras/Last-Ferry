@@ -3,7 +3,8 @@ import {texture,polygon,line,ellipse,label,glow} from '../utils/drawing';
 import {createFerryTexture} from './ferry';
 import {BOARDING as B} from '../scenes/boardingConfig';
 
-export function createBoardingArt(scene:Phaser.Scene){
+/** The Karaköy-bound ferry, shared by its Kadıköy mooring and its Karaköy arrival. */
+export function createMooredFerryTexture(scene:Phaser.Scene){
  createFerryTexture(scene);
  texture(scene,'karakoy-ferry',400,160,c=>{
   c.drawImage(scene.textures.get('ferry').getSourceImage() as HTMLCanvasElement,0,0);
@@ -13,6 +14,9 @@ export function createBoardingArt(scene:Phaser.Scene){
   c.fillStyle=light;c.fillRect(98,83,17,39);line(c,97,81,97,123,'#dfc48b',1);
   line(c,95,123,119,123,'#d1c19b',2);c.fillStyle='#8d9587';c.fillRect(156,110,90,12);label(c,'KARAKÖY',160,118,7,'#203b3d','sans-serif',1);
  });
+}
+export function createBoardingArt(scene:Phaser.Scene){
+ createMooredFerryTexture(scene);
  texture(scene,'boarding-ramp',135,158,c=>{
   c.translate(-B.gateX+50,-B.deckY+8);
   polygon(c,[[B.cabinX-11,447],[B.cabinX+11,447],[B.gateX+25,525],[B.gateX-25,525]],'#273b40','#78817a');

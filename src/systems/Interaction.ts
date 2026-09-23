@@ -4,7 +4,8 @@ import {Player} from '../entities/Player';
 import {PIER} from '../scenes/config';
 import {PIER_OBJECTS} from '../scenes/promenade';
 const BENCH=PIER_OBJECTS.find(object=>object.id==='bench-0')!;
-export interface LookPoint{x:number;y:number;radius:number;text:string;}
+/** `prompt` replaces "[E]  Bak"; `onLook` runs on E, and a point without `text` shows no line. */
+export interface LookPoint{x:number;y:number;radius:number;text?:string;prompt?:string;onLook?:()=>void;}
 /** One proximity interaction; intentionally no dialogue tree or quest state. */
 export class Interaction{
  private prompt:Phaser.GameObjects.Text;
@@ -23,9 +24,12 @@ export class Interaction{
  update(player:Player,pressed=Phaser.Input.Keyboard.JustDown(this.key)){
   const target=this.points.find(point=>Math.hypot(player.x-point.x,player.y-point.y)<point.radius);
   const near=Boolean(target);
-  if(target)placePrompt(this.scene,this.prompt,target.x,Math.min(478,player.y-116));
+  if(target){const label=target.prompt??'[E]  Bak';if(this.prompt.text!==label)this.prompt.setText(label);placePrompt(this.scene,this.prompt,target.x,Math.min(478,player.y-116));}
   if(near!==this.near){this.near=near;this.scene.tweens.killTweensOf(this.prompt);this.scene.tweens.add({targets:this.prompt,alpha:near&&!this.showing?1:0,duration:300});}
-  if(target&&!this.showing&&pressed){this.quote.setText(`“${target.text}”`);this.showing=true;this.prompt.setAlpha(0);
+  if(target&&!this.showing&&pressed){
+   target.onLook?.();
+   if(!target.text)return;
+   this.quote.setText(`“${target.text}”`);this.showing=true;this.prompt.setAlpha(0);
    this.scene.tweens.add({targets:[this.quote,this.ornament],alpha:1,duration:900,hold:4200,yoyo:true,onComplete:()=>{this.showing=false;if(this.near)this.scene.tweens.add({targets:this.prompt,alpha:1,duration:400});}});
   }
  }
