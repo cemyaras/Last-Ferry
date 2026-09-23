@@ -6,7 +6,7 @@ import {join,resolve} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 const output=mkdtempSync(join(tmpdir(),'son-vapur-movement-'));
-execFileSync(process.execPath,['node_modules/typescript/bin/tsc','--target','ES2022','--module','commonjs','--skipLibCheck','--outDir',output,'src/entities/movement.ts']);
+execFileSync(process.execPath,['node_modules/typescript/bin/tsc','--target','ES2022','--module','commonjs','--skipLibCheck','--outDir',output,'src/entities/movement.ts','src/scenes/ferryConfig.ts','src/scenes/karakoyConfig.ts','src/systems/FerryJourney.ts']);
 const require=createRequire(import.meta.url);
 const {moveOnPromenade, movementTarget}=require(join(output,'entities/movement.js'));
 const {OBSTACLES,PIER_OBJECTS,WALK_AREA,FOOTPRINT,promenadeDepth}=require(join(output,'scenes/promenade.js'));
@@ -70,4 +70,49 @@ test('render depth changes across the same furniture footprint',()=>{
   assert.ok(promenadeDepth(o.footprint.top-5)<promenadeDepth(o.sortY),o.id);
   assert.ok(promenadeDepth(o.footprint.bottom+5)>promenadeDepth(o.sortY),o.id);
  }
+});
+
+const {DECK_BOUNDS,DECK_OBSTACLES}=require(join(output,'scenes/ferryConfig.js'));
+test('ferry deck stays bounded and every prop blocks approach',()=>{
+ const move=(x,y,dx,dy)=>moveOnPromenade(x,y,dx,dy,DECK_OBSTACLES,DECK_BOUNDS);
+ assert.equal(move(800,600,0,-1000).y,DECK_BOUNDS.minY);
+ assert.equal(move(800,600,0,1000).y,DECK_BOUNDS.maxY);
+ assert.equal(move(800,610,10000,0).x,DECK_BOUNDS.maxX);
+ assert.equal(move(800,610,-10000,0).x,DECK_BOUNDS.minX);
+ for(const box of DECK_OBSTACLES){
+  const x=Math.max(DECK_BOUNDS.minX,Math.min(DECK_BOUNDS.maxX,(box.left+box.right)/2));
+  assert.ok(move(x,625,0,-500).y>=Math.max(DECK_BOUNDS.minY,box.bottom+4),box.id);
+ }
+});
+
+const {STREET_BOUNDS,STREET_OBSTACLES,STREET_LOOKS}=require(join(output,'scenes/karakoyConfig.js'));
+test('Karaköy route, three observations and closed uphill boundary stay accessible and solid',()=>{
+ const move=(x,y,dx,dy)=>moveOnPromenade(x,y,dx,dy,STREET_OBSTACLES,STREET_BOUNDS);
+ let p={x:220,y:592};
+ for(let i=0;i<320;i++)p=move(p.x,p.y,5,0);
+ assert.equal(p.x,STREET_BOUNDS.maxX);
+ assert.equal(move(p.x,p.y,100,0).x,STREET_BOUNDS.maxX);
+ for(const point of STREET_LOOKS){const near=move(point.x,592,0,-100);assert.ok(Math.hypot(near.x-point.x,near.y-point.y)<point.radius);}
+ for(const box of STREET_OBSTACLES.filter(b=>b.id!=='closed-end')){
+  const x=(box.left+box.right)/2;
+  assert.ok(move(x,630,0,-500).y>=box.bottom+4,box.id);
+ }
+ assert.equal(move(1620,592,0,-200).y,530);
+ assert.equal(move(1080,565,170,0).x,1116);
+ assert.equal(move(1080,600,170,0).x,1250);
+});
+const {FerryJourney}=require(join(output,'systems/FerryJourney.js'));
+test('ferry allows exploration, eases into port, docks and never skips on resume',()=>{
+ const trip=new FerryJourney();
+ for(let i=0;i<590;i++)trip.update(.05);
+ assert.equal(trip.phase,'cruising');assert.equal(trip.approach,0);assert.equal(trip.arrived,false);
+ trip.update(10000);assert.ok(trip.elapsed<30); // background-tab stalls cannot teleport to port
+ let speed=trip.speed,distance=trip.distance;
+ while(trip.elapsed<44){trip.update(.05);assert.ok(trip.speed<=speed+1e-8);assert.ok(trip.distance>=distance);speed=trip.speed;distance=trip.distance;}
+ assert.equal(trip.phase,'docking');assert.equal(trip.arrived,false);assert.equal(trip.speed,0);
+ while(trip.elapsed<48)trip.update(.05);
+ assert.equal(trip.phase,'moored');assert.equal(trip.arrived,true);
+ const docked=trip.distance;for(let i=0;i<100;i++)trip.update(.05);assert.equal(trip.distance,docked);
+ const sixty=new FerryJourney();for(let i=0;i<48*60+1;i++)sixty.update(1/60);
+ assert.equal(sixty.phase,'moored');assert.ok(Math.abs(sixty.distance-trip.distance)<1e-8);
 });

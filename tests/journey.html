@@ -1,0 +1,70 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>SON VAPUR — journey checks</title><style>#checks{position:fixed;top:0;left:0;z-index:100;background:#08141eee;color:#e1dbc4;padding:10px;font:11px monospace;max-width:440px}button{padding:8px}#results{white-space:pre-wrap}</style></head><body><main id="game"></main><aside id="checks"><button id="run">Run journey checks</button><button id="inspect">Inspect boarding pier</button><div id="results">Ready. Walks from the real starting point to the bench and ferry.</div></aside><script type="module">
+import {game} from '../src/main.ts';
+import {PIER} from '../src/scenes/config.ts';
+import {BOARDING as B} from '../src/scenes/boardingConfig.ts';
+const output=document.querySelector('#results'),results=[];
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const key=(type,key,code,keyCode)=>window.dispatchEvent(new KeyboardEvent(type,{key,code,keyCode,which:keyCode,bubbles:true}));
+async function hold(k,code,n,ms){key('keydown',k,code,n);await wait(ms);key('keyup',k,code,n);await wait(260);}
+function check(condition,label){results.push(`${condition?'PASS':'FAIL'} ${label}`);output.textContent=results.join('\n');if(!condition)throw new Error(label);}
+document.querySelector('#inspect').onclick=()=>{const s=game.scene.getScene('pier');s.player.x=620;s.player.y=582;s.player.velocity=0;s.player.velocityY=0;s.cameras.main.scrollX=0;};
+document.querySelector('#run').onclick=async()=>{
+ document.querySelectorAll('button').forEach(b=>b.disabled=true);
+ try{
+  const s=game.scene.getScene('pier'),p=s.player,b=s.boarding;
+  check(p.x===PIER.startX&&p.facing===-1,'Starts at the right facing the pier');
+  await hold('e','KeyE',69,60);check(b.state==='waiting','E away from the ferry does nothing');
+  await hold('a','KeyA',65,(p.x-PIER.benchX)/PIER.walkSpeed*1000);
+  check(s.interaction.prompt.alpha>.9,'Original bench is reachable on the walk to the pier');
+  check(!s.interaction.showing&&b.state==='waiting','Earlier out-of-range E is not replayed later');
+  await hold('e','KeyE',69,60);await wait(900);check(s.interaction.quote.alpha>.9,'Bench still receives E independently');
+  await hold('a','KeyA',65,(p.x-B.gateX)/PIER.walkSpeed*1000);
+  check(b.prompt.alpha>.9&&b.state==='waiting','Boarding prompt appears at the actual gangway');
+  await hold('e','KeyE',69,60);check(b.state==='boarding','E begins boarding exactly once');
+  check(s.interaction.quote.alpha===0&&s.interaction.prompt.alpha===0,'Bench text clears when boarding begins');
+  key('keydown','s','KeyS',83);key('keydown','a','KeyA',65);
+  await wait(4600);key('keyup','s','KeyS',83);key('keyup','a','KeyA',65);
+  check(b.state==='aboard','Boarding reaches the cabin despite held movement keys');
+  check(Math.abs(p.x-(B.cabinX+10))<1&&Math.abs(p.y-B.deckY)<1,'Scripted path finishes at the ferry doorway');
+  await wait(1500);
+  const deck=game.scene.getScene('FerryScene');
+  check(deck.scene.isActive()&&!s.scene.isActive(),'Boarding transitions cleanly to FerryScene');
+  check(deck.player.visual.visible&&!deck.player.boardingTarget,'Traveller is playable on the deck');
+  const x=deck.player.x;await hold('d','KeyD',68,600);check(deck.player.x>x+40,'Deck movement works after the transition');
+  check(game.scene.getScenes(true).length===1,'Only one playable scene remains active');
+  // Continue the actual trip without teleporting or advancing the simulation clock.
+  const waitUntil=async(predicate,label,limit=65000)=>{const end=performance.now()+limit;while(!predicate()){if(performance.now()>end)throw new Error('Timeout: '+label);await wait(100);}};
+  const walkTo=async(player,x)=>{const right=x>player.x;key('keydown',right?'d':'a',right?'KeyD':'KeyA',right?68:65);await waitUntil(()=>right?player.x>=x-3:player.x<=x+3,'walk to '+x,20000);key('keyup',right?'d':'a',right?'KeyD':'KeyA',right?68:65);await wait(280);};
+  const depthTo=async(player,y)=>{const down=y>player.y;key('keydown',down?'s':'w',down?'KeyS':'KeyW',down?83:87);await waitUntil(()=>down?player.y>=y-2:player.y<=y+2,'depth to '+y,6000);key('keyup',down?'s':'w',down?'KeyS':'KeyW',down?83:87);await wait(280);};
+  await waitUntil(()=>!deck.interactions.busy,'intro');
+  await walkTo(deck.player,800);await depthTo(deck.player,531);
+  await hold('e','KeyE',69,60);await wait(800);
+  check(deck.interactions.line.text.includes('Boğaz geceleri'),'Deck environment can be explored before arrival');
+  check(!deck.arrived&&deck.journey.phase==='cruising','Cruise leaves time for exploration');
+  await depthTo(deck.player,593);await walkTo(deck.player,1156);
+  await waitUntil(()=>!deck.interactions.busy,'railing line');await hold('e','KeyE',69,60);
+  check(!deck.leaving&&!deck.arrived,'Exit cannot leave the ferry while underway');
+  await waitUntil(()=>deck.journey.approach>.35,'waterfront approach');
+  check(deck.waterfront.alpha>.2&&deck.journey.speed<4.4,'Waterfront appears as the ferry slows');
+  check(deck.hornSounded,'Arrival horn is triggered once on approach');
+  await waitUntil(()=>deck.journey.phase==='docking','docking');check(!deck.arrived,'Docking completes before exit opens');
+  await waitUntil(()=>deck.arrived&&!deck.interactions.busy,'moored');
+  check(deck.route.text==='KARAKÖY İSKELESİ','Minimal arrival indication is visible');
+  let handoffs=0;const handoff=()=>handoffs++;game.events.on('karakoy-arrival',handoff);
+  await hold('e','KeyE',69,60);await hold('e','KeyE',69,60);
+  await waitUntil(()=>game.scene.isActive('KarakoyScene'),'shore transition',5000);
+  const shore=game.scene.getScene('KarakoyScene'),traveller=shore.player;
+  check(handoffs===1&&game.scene.getScenes(true).length===1,'Exactly one handoff and one active scene');game.events.off('karakoy-arrival',handoff);
+  await wait(1100);check(traveller.visual.visible&&traveller.x===220,'Traveller arrives on shore with no stuck input');
+  await hold('e','KeyE',69,60);await wait(950);check(shore.interaction.quote.text.includes('Son vapur arkamda'),'Terminal observation works');
+  await walkTo(traveller,860);await hold('e','KeyE',69,60);await wait(950);check(shore.interaction.quote.text.includes('Kepenk çoktan'),'Closed shop observation works');
+  await walkTo(traveller,1658);await depthTo(traveller,543);
+  await hold('e','KeyE',69,60);await wait(950);check(shore.interaction.quote.text.includes('Galata'),'Uphill observation works');
+  await walkTo(traveller,1620);await hold('w','KeyW',87,900);check(traveller.y===530,'Closed stair gate blocks further progress');
+  await depthTo(traveller,599);await hold('d','KeyD',68,1900);check(traveller.x===1778,'End wall contains the playable area');
+  const edge=traveller.x;await hold('ArrowLeft','ArrowLeft',37,550);check(traveller.x<edge-40,'Arrow controls work after both transitions');
+  check(shore.cameras.main.scrollX<=640&&shore.cameras.main.scrollY===0,'Street camera stays horizontal and within bounds');
+  output.textContent+='\nCOMPLETE — all journey checks passed.';
+ }catch(error){output.textContent+='\nERROR '+error.message;}finally{for(const [k,c,n] of [['a','KeyA',65],['d','KeyD',68],['w','KeyW',87],['s','KeyS',83],['e','KeyE',69],['ArrowLeft','ArrowLeft',37]])key('keyup',k,c,n);}
+};
+</script></body></html>

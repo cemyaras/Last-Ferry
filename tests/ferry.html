@@ -1,0 +1,48 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>SON VAPUR — ferry checks</title><style>#checks{position:fixed;top:0;left:0;z-index:100;background:#08141eee;color:#e1dbc4;padding:10px;font:11px monospace;max-width:490px}button{padding:7px}#results{white-space:pre-wrap}</style></head><body><main id="game"></main><aside id="checks"><button id="open">Open ferry deck</button><button id="run" disabled>Run ferry checks</button><div id="results">Ready.</div></aside><script type="module">
+import {game} from '../src/main.ts';
+import {DECK_BOUNDS,FERRY} from '../src/scenes/ferryConfig.ts';
+const output=document.querySelector('#results'),results=[];
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const data={a:['a','KeyA',65],d:['d','KeyD',68],w:['w','KeyW',87],s:['s','KeyS',83],e:['e','KeyE',69]};
+function key(type,name){const [key,code,keyCode]=data[name];window.dispatchEvent(new KeyboardEvent(type,{key,code,keyCode,which:keyCode,bubbles:true}));}
+async function hold(name,ms){key('keydown',name);await wait(ms);key('keyup',name);await wait(220);}
+function check(value,label){results.push(`${value?'PASS':'FAIL'} ${label}`);output.textContent=results.join('\n');if(!value)throw new Error(label);}
+function place(x,y){const p=game.scene.getScene('FerryScene').player;for(const k of Object.keys(data))key('keyup',k);p.x=x;p.y=y;p.velocity=0;p.velocityY=0;p.update(0);}
+document.querySelector('#open').onclick=async()=>{game.scene.stop('pier');game.scene.start('FerryScene');document.querySelector('#open').disabled=true;await wait(200);document.querySelector('#run').disabled=false;};
+document.querySelector('#run').onclick=async()=>{
+ document.querySelector('#run').disabled=true;
+ try{
+  const s=game.scene.getScene('FerryScene'),p=s.player;
+  check(s.scene.isActive()&&p.visual.visible,'FerryScene opens directly into a playable deck');
+  check(p.x===FERRY.startX&&p.y===FERRY.startY,'Traveller spawns clear of cabin and furniture');
+  const x=p.x;await hold('d',600);check(p.x>x+45,'Horizontal movement works');
+  check(s.ambience.hornContext?.state==='running','Deck input unlocks procedural horn audio');
+  const y=p.y;await hold('s',500);check(p.y>y+20,'Limited depth movement works');
+  await hold('w',500);check(Math.abs(p.y-y)<4,'Up movement returns along the deck');
+  place(1190,610);await hold('d',500);check(p.x===DECK_BOUNDS.maxX,'Right gunwale contains player');
+  place(800,521);await hold('w',600);check(p.y===DECK_BOUNDS.minY,'Rear railing prevents entering water');
+  place(800,627);await hold('s',600);check(p.y===DECK_BOUNDS.maxY,'Near deck edge contains player');
+  place(270,570);await hold('w',900);check(p.y===539,'Cabin door remains solid');
+  place(600,590);await hold('w',900);check(p.y===561,'Bench blocks feet');
+  place(540,506);await hold('d',1500);check(p.x>680&&p.visual.depth<s.children.getByName('ferry-bench').depth,'Traveller passes behind the bench with Y sorting');
+  place(893,550);await hold('w',900);check(p.y===525,'Standing passenger has a footprint');
+  place(800,530);while(s.interactions.activeLine)await wait(100);
+  await hold('e',60);await wait(650);check(s.interactions.line.text==='“Boğaz geceleri her şeyi biraz uzaklaştırıyor.”'&&s.interactions.line.alpha>.9,'Railing shows the exact requested line');
+  while(s.interactions.activeLine)await wait(100);
+  place(270,560);await hold('e',60);await wait(650);check(s.interactions.line.text.includes('Salon kapısı kapalı'),'Cabin explains limited interior access');
+  check(s.skyline.x<0&&s.drift>0,'Skyline drifts during the crossing');
+  while(!s.arrived)await wait(150);while(s.interactions.activeLine)await wait(100);
+  check(s.ambience.hornPlayed&&s.hornSounded,'Arrival horn has played once during approach');
+  check(s.elapsed>=FERRY.crossingSeconds&&s.route.text==='KARAKÖY İSKELESİ','Crossing reaches Karaköy after a playable interval');
+  let arrivals=0;const onArrival=()=>arrivals++;game.events.on('karakoy-arrival',onArrival);
+  place(1208,580);await wait(250);check(s.interactions.prompt.getBounds().right<=1262,'Exit prompt remains inside the screen at the gunwale');
+  place(1155,580);await hold('e',60);check(arrivals===1&&s.leaving,'Exit emits one destination handoff');
+  check(s.interactions.prompt.alpha===0&&s.interactions.line.alpha===0,'Interaction UI clears as disembarkation begins');
+  check(s.scene.isActive()&&p.visual.visible,'Traveller remains visible during the exit fade');
+  await hold('e',60);check(arrivals===1,'Repeated input cannot duplicate handoff');game.events.off('karakoy-arrival',onArrival);
+  await wait(1800);check(game.scene.isActive('KarakoyScene')&&!s.scene.isActive(),'Exit reaches playable Karaköy');
+  check(game.scene.getScenes(true).length===1,'Only Karaköy remains active');
+  output.textContent+='\nCOMPLETE — all ferry checks passed.';
+ }catch(error){output.textContent+='\nERROR '+error.message;}finally{for(const k of Object.keys(data))key('keyup',k);}
+};
+</script></body></html>

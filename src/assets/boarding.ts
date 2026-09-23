@@ -11,7 +11,7 @@ export function createBoardingArt(scene:Phaser.Scene){
   c.fillStyle='#162b31';c.fillRect(95,80,23,43);
   const light=c.createLinearGradient(95,0,118,0);light.addColorStop(0,'#ac955b');light.addColorStop(1,'#34423c');
   c.fillStyle=light;c.fillRect(98,83,17,39);line(c,97,81,97,123,'#dfc48b',1);
-  line(c,95,123,119,123,'#d1c19b',2);label(c,'KARAKÖY',160,118,7,'#203b3d','sans-serif',1);
+  line(c,95,123,119,123,'#d1c19b',2);c.fillStyle='#8d9587';c.fillRect(156,110,90,12);label(c,'KARAKÖY',160,118,7,'#203b3d','sans-serif',1);
  });
  texture(scene,'boarding-ramp',135,158,c=>{
   c.translate(-B.gateX+50,-B.deckY+8);

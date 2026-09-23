@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>SON VAPUR — boarding checks</title><style>#checks{position:fixed;top:0;left:0;z-index:100;background:#08141eee;color:#e1dbc4;padding:10px;font:11px monospace;max-width:440px}button{padding:8px}#results{white-space:pre-wrap}</style></head><body><main id="game"></main><aside id="checks"><button id="run">Run boarding checks</button><button id="inspect">Inspect boarding pier</button><div id="results">Ready. Walks from the real starting point to the bench and ferry.</div></aside><script type="module">
+import {game} from '../src/main.ts';
+import {PIER} from '../src/scenes/config.ts';
+import {BOARDING as B} from '../src/scenes/boardingConfig.ts';
+const output=document.querySelector('#results'),results=[];
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const key=(type,key,code,keyCode)=>window.dispatchEvent(new KeyboardEvent(type,{key,code,keyCode,which:keyCode,bubbles:true}));
+async function hold(k,code,n,ms){key('keydown',k,code,n);await wait(ms);key('keyup',k,code,n);await wait(260);}
+function check(condition,label){results.push(`${condition?'PASS':'FAIL'} ${label}`);output.textContent=results.join('\n');if(!condition)throw new Error(label);}
+document.querySelector('#inspect').onclick=()=>{const s=game.scene.getScene('pier');s.player.x=620;s.player.y=582;s.player.velocity=0;s.player.velocityY=0;s.cameras.main.scrollX=0;};
+document.querySelector('#run').onclick=async()=>{
+ document.querySelectorAll('button').forEach(b=>b.disabled=true);
+ try{
+  const s=game.scene.getScene('pier'),p=s.player,b=s.boarding;
+  check(p.x===PIER.startX&&p.facing===-1,'Starts at the right facing the pier');
+  await hold('e','KeyE',69,60);check(b.state==='waiting','E away from the ferry does nothing');
+  await hold('a','KeyA',65,(p.x-PIER.benchX)/PIER.walkSpeed*1000);
+  check(s.interaction.prompt.alpha>.9,'Original bench is reachable on the walk to the pier');
+  check(!s.interaction.showing&&b.state==='waiting','Earlier out-of-range E is not replayed later');
+  await hold('e','KeyE',69,60);await wait(900);check(s.interaction.quote.alpha>.9,'Bench still receives E independently');
+  await hold('a','KeyA',65,(p.x-B.gateX)/PIER.walkSpeed*1000);
+  check(b.prompt.alpha>.9&&b.state==='waiting','Boarding prompt appears at the actual gangway');
+  await hold('e','KeyE',69,60);check(b.state==='boarding','E begins boarding exactly once');
+  check(s.interaction.quote.alpha===0&&s.interaction.prompt.alpha===0,'Bench text clears when boarding begins');
+  key('keydown','s','KeyS',83);key('keydown','a','KeyA',65);
+  await wait(4600);key('keyup','s','KeyS',83);key('keyup','a','KeyA',65);
+  check(b.state==='aboard','Boarding reaches the cabin despite held movement keys');
+  check(Math.abs(p.x-(B.cabinX+10))<1&&Math.abs(p.y-B.deckY)<1,'Scripted path finishes at the ferry doorway');
+  await wait(1500);
+  const deck=game.scene.getScene('FerryScene');
+  check(deck.scene.isActive()&&!s.scene.isActive(),'Boarding transitions cleanly to FerryScene');
+  check(deck.player.visual.visible&&!deck.player.boardingTarget,'Traveller is playable on the deck');
+  const x=deck.player.x;await hold('d','KeyD',68,600);check(deck.player.x>x+40,'Deck movement works after the transition');
+  check(game.scene.getScenes(true).length===1,'Only one playable scene remains active');
+  output.textContent+='\nCOMPLETE — all boarding checks passed.';
+ }catch(error){output.textContent+='\nERROR '+error.message;}finally{for(const [k,c,n] of [['a','KeyA',65],['s','KeyS',83],['e','KeyE',69]])key('keyup',k,c,n);}
+};
+</script></body></html>

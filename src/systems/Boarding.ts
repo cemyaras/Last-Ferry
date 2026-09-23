@@ -3,7 +3,7 @@ import {Player} from '../entities/Player';
 import {BOARDING as B,withinBoardingReach} from '../scenes/boardingConfig';
 import {createBoardingArt} from '../assets/boarding';
 
-/** The prototype's one terminal interaction. Stops aboard; no Karaköy scene. */
+/** One terminal interaction leading to the playable ferry deck. */
 export class Boarding{
  state:'waiting'|'boarding'|'aboard'='waiting';
  private prompt:Phaser.GameObjects.Text;
@@ -21,6 +21,7 @@ export class Boarding{
   this.prompt=scene.add.text(B.gateX,410,'[E]  Karaköy vapuruna bin',{fontFamily:'Georgia, serif',fontSize:'15px',color:'#e0d5b2',backgroundColor:'#14262dd9',padding:{x:11,y:7}}).setOrigin(.5).setDepth(60).setAlpha(0);
  }
  update(dt:number){
+  const pressed=Phaser.Input.Keyboard.JustDown(this.key);
   this.elapsed+=dt;
   // The moored ferry moves only a fraction of a pixel against its gangway.
   this.ferry.y=B.ferryY+Math.sin(this.elapsed*.75)*.3;
@@ -32,7 +33,7 @@ export class Boarding{
   if(this.state==='waiting'){
    const near=withinBoardingReach(this.player.x,this.player.y);
    if(near!==this.near){this.near=near;this.scene.tweens.killTweensOf(this.prompt);this.scene.tweens.add({targets:this.prompt,alpha:near?1:0,duration:250});}
-   if(near&&Phaser.Input.Keyboard.JustDown(this.key)){
+   if(near&&pressed){
     this.state='boarding';this.scene.tweens.killTweensOf(this.prompt);this.prompt.setAlpha(0);this.onBegin();
     this.player.boardingTarget=this.path[0];
    }
@@ -44,15 +45,12 @@ export class Boarding{
     else this.finish();
    }
   }
+  return pressed;
  }
  private finish(){
   if(this.state!=='boarding')return;
   this.state='aboard';this.player.finishBoarding();
-  const veil=this.scene.add.rectangle(640,360,1280,720,0x08151e).setScrollFactor(0).setDepth(80).setAlpha(0);
-  this.scene.tweens.add({targets:veil,alpha:.86,duration:1600,delay:300});
-  const title=this.scene.add.text(640,314,'KARAKÖY VAPURU',{fontFamily:'Georgia, serif',fontSize:'25px',color:'#d6caaa'}).setOrigin(.5).setScrollFactor(0).setDepth(81).setAlpha(0);
-  const line=this.scene.add.text(640,360,'Güverteye adım attın.',{fontFamily:'Georgia, serif',fontSize:'20px',fontStyle:'italic',color:'#aebeb8'}).setOrigin(.5).setScrollFactor(0).setDepth(81).setAlpha(0);
-  const end=this.scene.add.text(640,414,'Devamı gelecek.',{fontFamily:'Georgia, serif',fontSize:'14px',color:'#889a9e'}).setOrigin(.5).setScrollFactor(0).setDepth(81).setAlpha(0);
-  this.scene.tweens.add({targets:[title,line,end],alpha:1,duration:1200,delay:1300});
+  this.scene.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,()=>this.scene.scene.start('FerryScene'));
+  this.scene.cameras.main.fadeOut(850,8,21,30);
  }
 }

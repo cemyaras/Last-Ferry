@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>Son Vapur — Karaköy inspection</title><style>#checks{position:fixed;z-index:100;top:0;left:0;background:#091b25db;padding:8px;color:#dbd6b9;font:11px monospace}button{padding:6px}#results{white-space:pre-wrap}</style></head><body><main id="game"></main><aside id="checks"><button id="open">Open Karaköy</button><button id="run" disabled>Run street checks</button><button id="gate" disabled>Inspect uphill gate</button><button id="sort" disabled>Inspect behind planter</button><button id="front" disabled>Inspect in front of planter</button><div id="results">Ready.</div></aside><script type="module">
+import {game} from '../src/main.ts';
+const output=document.querySelector('#results');
+function place(x,y){const s=game.scene.getScene('KarakoyScene');s.player.x=x;s.player.y=y;s.player.velocity=0;s.player.velocityY=0;s.player.update(0);s.cameras.main.scrollX=Math.max(0,Math.min(640,x-563));}
+document.querySelector('#open').onclick=()=>{game.scene.stop('pier');game.scene.start('KarakoyScene');document.querySelectorAll('button').forEach(b=>b.disabled=false);document.querySelector('#open').disabled=true;output.textContent='Walk with WASD / arrows; E to look.';};
+document.querySelector('#gate').onclick=()=>place(1658,560);
+document.querySelector('#sort').onclick=()=>place(1160,536);
+document.querySelector('#front').onclick=()=>place(1160,604);
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const keys={a:['a','KeyA',65],d:['d','KeyD',68],w:['w','KeyW',87],s:['s','KeyS',83],e:['e','KeyE',69]};
+function key(type,name){const [key,code,keyCode]=keys[name];window.dispatchEvent(new KeyboardEvent(type,{key,code,keyCode,which:keyCode,bubbles:true}));}
+async function hold(name,ms){key('keydown',name);await wait(ms);key('keyup',name);await wait(260);}
+document.querySelector('#run').onclick=async()=>{
+ document.querySelectorAll('button').forEach(b=>b.disabled=true);const results=[];
+ const check=(ok,label)=>{results.push((ok?'PASS ':'FAIL ')+label);output.textContent=results.join('\n');if(!ok)throw new Error(label);};
+ try{
+  const s=game.scene.getScene('KarakoyScene'),p=s.player;
+  place(400,592);await hold('d',500);check(p.x>440,'Walking reaches the urban lane');
+  place(1080,565);await hold('d',900);check(p.x===1116,'Planter blocks feet');
+  place(1160,536);await wait(200);check(p.visual.depth<s.children.getByName('karakoy-planter').depth,'Player passes behind planter');
+  place(1160,604);await wait(200);check(p.visual.depth>s.children.getByName('karakoy-planter').depth,'Player passes in front of planter');
+  place(782,590);await hold('w',1300);check(p.y===535,'Lamp base has a solid footprint');
+  place(1620,592);await hold('w',1300);check(p.y===530,'Stair gate blocks further travel');
+  place(1730,600);await hold('d',1200);check(p.x===1778,'End wall cannot be bypassed');
+  place(300,590);await hold('s',1200);check(p.y===635,'Foreground stays outside the playable strip');
+  place(860,592);await hold('e',70);await wait(1000);check(s.interaction.quote.alpha>.95&&s.interaction.quote.text.includes('Kepenk'),'Street observation displays');
+  check(s.interaction.quote.scrollFactorX===0&&s.interaction.quote.scrollFactorY===0,'Observation UI stays fixed to the screen');
+  output.textContent+='\nCOMPLETE — all street checks passed.';
+ }catch(e){output.textContent+='\nERROR '+e.message;}finally{for(const k of Object.keys(keys))key('keyup',k);document.querySelectorAll('button:not(#open)').forEach(b=>b.disabled=false);}
+};
+</script></body></html>

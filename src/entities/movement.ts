@@ -9,8 +9,9 @@ const clamp=(value:number,min:number,max:number)=>Math.max(min,Math.min(max,valu
 
 /** Sweep the feet against expanded solid footprints, then slide along the free
  * axis. Tall artwork is deliberately not treated as a top-down collision box. */
-export function moveOnPromenade(x:number,y:number,dx:number,dy:number,obstacles:readonly Obstacle[]=OBSTACLES){
- let nextX=clamp(x+dx,WALK_AREA.minX,WALK_AREA.maxX);
+export type WalkBounds={minX:number;maxX:number;minY:number;maxY:number};
+export function moveOnPromenade(x:number,y:number,dx:number,dy:number,obstacles:readonly Obstacle[]=OBSTACLES,bounds:WalkBounds=WALK_AREA){
+ let nextX=clamp(x+dx,bounds.minX,bounds.maxX);
  for(const box of obstacles){
   const left=box.left-FOOTPRINT.halfWidth,right=box.right+FOOTPRINT.halfWidth;
   if(y>box.top-FOOTPRINT.halfDepth&&y<box.bottom+FOOTPRINT.halfDepth){
@@ -18,7 +19,7 @@ export function moveOnPromenade(x:number,y:number,dx:number,dy:number,obstacles:
    if(dx<0&&x>=right&&nextX<right)nextX=right;
   }
  }
- let nextY=clamp(y+dy,WALK_AREA.minY,WALK_AREA.maxY);
+ let nextY=clamp(y+dy,bounds.minY,bounds.maxY);
  for(const box of obstacles){
   const top=box.top-FOOTPRINT.halfDepth,bottom=box.bottom+FOOTPRINT.halfDepth;
   if(nextX>box.left-FOOTPRINT.halfWidth&&nextX<box.right+FOOTPRINT.halfWidth){
