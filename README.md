@@ -1,8 +1,10 @@
-# SON VAPUR
+# ⛴️ SON VAPUR
+
+🎮 **[Play on GitHub Pages](https://cemyaras.github.io/Last-Ferry/)**
 
 A small atmospheric, playable scene at Kadıköy ferry pier, 23:40. Built with TypeScript, Phaser 3 and Vite. Opens directly into the scene, with no menus or external assets.
 
-## Run
+## 🏃‍♂️ Run
 
 ```sh
 npm install
@@ -23,7 +25,7 @@ npm run build   # TypeScript check and production bundle
 npm run preview
 ```
 
-## Structure
+## 🏗️ Structure
 
 - `src/scenes/PierScene.ts` — scene composition and minimal UI
 - `src/scenes/config.ts` — dimensions, movement bounds, interaction position, lamps, shared scene time and parallax
@@ -42,15 +44,15 @@ npm run preview
 
 All artwork is generated locally in code. No downloaded images, fonts or audio. Static art is cached into textures; animated effects use bounded particle/stroke counts. The ferry wraps offscreen for uninterrupted atmosphere. Movement and effects are delta-time based, with a capped delta on resume.
 
-## Audio
+## 🔊 Audio
 
 This prototype is intentionally silent. `Ambience` accepts an optional manifest with `rain`, `water`, `ferry-horn`, `seagulls` and `city` channels. Supply `{ url, volume, loop }` entries when original audio is available. The scene preloads the manifest and starts looping tracks after a keyboard or pointer gesture. Non-looping tracks are triggered with `play(channel)`. Audio objects are cleaned up when the scene shuts down.
 
-## Scope
+## 🎯 Scope
 
 One area, one character, one bench reflection and a short boarding interaction. No Karaköy area, quests, inventory, saves, combat, menus, or dialogue trees.
 
-## Browser verification
+## 🧪 Browser verification
 
 With the dev server running, open `/tests/smoke.html` and click **Run playable scene checks**. The development-only harness drives the real Phaser scene with keyboard events and checks both control schemes, direction, opposing keys, world bounds, bench proximity, the exact quote, fade-out, and animation-loop performance. It also checks the wider pier, camera limits, traveller scale, ferry occlusion order, fading movement hint, shared clock, and screen-fixed dialogue. It takes about 50 seconds and is not included in the production build.
 
