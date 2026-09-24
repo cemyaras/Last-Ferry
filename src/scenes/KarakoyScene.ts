@@ -8,7 +8,12 @@ import {Water} from '../systems/Water';
 import {Interaction} from '../systems/Interaction';
 import {Ambience} from '../systems/Ambience';
 import {locationCaption} from '../utils/sceneUi';
-import {KARAKOY,STREET_BOUNDS,STREET_OBSTACLES,STREET_LIGHTS,STREET_LOOKS,ARRIVAL_PATH,MOORED_FERRY,BRIDGE_EXIT,BRIDGE_EXIT_WALK_X,streetLight,streetLightOrigin} from './karakoyConfig';
+import {promenadeDepth} from './promenade';
+import {addPawTrail,createClueTextures} from '../assets/clues';
+import {StoryBeat} from '../story/StoryBeat';
+import {BEATS,STORY_TIMES} from '../story/lines';
+import {hasFlag} from '../story/state';
+import {KARAKOY,STREET_BOUNDS,STREET_OBSTACLES,STREET_LIGHTS,STREET_LOOKS,ARRIVAL_PATH,MOORED_FERRY,BRIDGE_EXIT,BRIDGE_EXIT_WALK_X,RESIDENT_WITNESS,FOOD_BOWL,KARAKOY_PAW_TRAIL,streetLight,streetLightOrigin} from './karakoyConfig';
 
 /** First waterfront lane; its left end leads onto Galata Bridge, its closed uphill gate stays shut. */
 export class KarakoyScene extends Phaser.Scene{
@@ -23,6 +28,7 @@ export class KarakoyScene extends Phaser.Scene{
  private arrivalStep=0;
  private elapsed=0;
  private leaving=false;
+ private witnessBeat!:StoryBeat;
  constructor(){super('KarakoyScene');}
  init(data:{from?:string}={}){this.arriving=data.from==='FerryScene';this.arrivalStep=0;this.elapsed=0;this.leaving=false;}
  preload(){this.ambience=new Ambience(this);this.ambience.preload();}
@@ -41,11 +47,15 @@ export class KarakoyScene extends Phaser.Scene{
   this.residents=new KarakoyResidents(this);
   this.atmosphere=new Atmosphere(this,{width:KARAKOY.width,lamps:STREET_LIGHTS,texturePrefix:'karakoy-',terminalGlow:false});
   this.interaction=new Interaction(this,[{...BRIDGE_EXIT,prompt:'[E]  Galata Köprüsü',onLook:()=>this.leaveForBridge()},...STREET_LOOKS]);
-  locationCaption(this,'K A R A K Ö Y');
+  createClueTextures(this);
+  this.add.image(FOOD_BOWL.x,FOOD_BOWL.y,'clue-bowl').setOrigin(.5,9/12).setDepth(promenadeDepth(FOOD_BOWL.y));
+  addPawTrail(this,'karakoy-paw-trail',KARAKOY_PAW_TRAIL,10.6,319);
+  this.witnessBeat=new StoryBeat(this,this.interaction,()=>BEATS.karakoyResident(hasFlag(this,'sawPoster')),p=>Math.abs(p.x-RESIDENT_WITNESS.x)<RESIDENT_WITNESS.range,{x:RESIDENT_WITNESS.x,y:RESIDENT_WITNESS.y-122});
+  locationCaption(this,'K A R A K Ö Y',STORY_TIMES.karakoy);
   this.cameras.main.setBounds(0,0,KARAKOY.width,KARAKOY.height).setScroll(0,0);
   this.input.keyboard!.resetKeys();
   this.game.canvas.setAttribute('tabindex','0');
-  this.game.canvas.setAttribute('aria-label','Son Vapur. Karaköy. WASD or arrow keys to walk. E to look at the ferry terminal, closed shop or uphill street. E at the left end: walk onto Galata Bridge.');
+  this.game.canvas.setAttribute('aria-label','Son Vapur. Karaköy. WASD or arrow keys to walk. E to look at the ferry terminal, the empty bowl at the closed shop or the uphill street. E at the left end: walk onto Galata Bridge.');
   this.input.once('pointerdown',()=>this.ambience.start());this.input.keyboard!.once('keydown',()=>this.ambience.start());
   this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>this.ambience.destroy());
   this.cameras.main.fadeIn(1000,8,21,30);
@@ -57,7 +67,7 @@ export class KarakoyScene extends Phaser.Scene{
   this.ferry.y=MOORED_FERRY.y+Math.sin(this.elapsed*.75)*.3;
   const camera=this.cameras.main,target=Phaser.Math.Clamp(this.player.x-1280*.44,0,KARAKOY.width-1280);
   camera.scrollX=Phaser.Math.Linear(camera.scrollX,target,1-Math.exp(-dt*1.8));
-  this.water.update(dt,camera.scrollX);this.atmosphere.update(dt);this.residents.update(dt);if(!this.leaving)this.interaction.update(this.player);
+  this.water.update(dt,camera.scrollX);this.atmosphere.update(dt);this.residents.update(dt);if(!this.leaving){this.witnessBeat.update(this.player);this.interaction.update(this.player);}
  }
  /** Reuses the traveller's authored-path walk; normal controls resume at the lane. */
  private advanceArrival(){

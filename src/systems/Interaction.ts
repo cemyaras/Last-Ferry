@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import {lookPrompt,observationLine,placePrompt} from '../utils/sceneUi';
+import {lookPrompt,observationLine,placePrompt,playLines} from '../utils/sceneUi';
 import {Player} from '../entities/Player';
 import {PIER} from '../scenes/config';
 import {PIER_OBJECTS} from '../scenes/promenade';
@@ -21,6 +21,12 @@ export class Interaction{
   this.ornament=scene.add.text(640,608,'—',{fontFamily:'Georgia, serif',fontSize:'18px',color:'#a79774'}).setOrigin(.5).setDepth(60).setAlpha(0).setScrollFactor(0);
  }
  hide(){this.scene.tweens.killTweensOf([this.prompt,this.quote,this.ornament]);this.prompt.setAlpha(0);this.quote.setAlpha(0);this.ornament.setAlpha(0);}
+ get busy(){return this.showing;}
+ /** A short line sequence in the same place as observations; prompts wait until it ends. */
+ say(lines:string|readonly string[],done?:()=>void){
+  this.showing=true;this.scene.tweens.killTweensOf(this.prompt);this.prompt.setAlpha(0);
+  playLines(this.scene,this.quote,typeof lines==='string'?[lines]:lines,()=>{this.showing=false;if(this.near)this.scene.tweens.add({targets:this.prompt,alpha:1,duration:400});done?.();},[this.ornament]);
+ }
  update(player:Player,pressed=Phaser.Input.Keyboard.JustDown(this.key)){
   const target=this.points.find(point=>Math.hypot(player.x-point.x,player.y-point.y)<point.radius);
   const near=Boolean(target);

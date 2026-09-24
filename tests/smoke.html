@@ -32,7 +32,8 @@ document.querySelector('#run').onclick=async()=>{
   check(scene.movementHint.alpha<.05,'Movement hint fades after walking');
   check(scene.interaction.prompt.scrollFactorX===1&&scene.interaction.quote.scrollFactorX===0,'Bench prompt follows the world; quote stays screen-fixed');
   event('keydown','e','KeyE',69);await wait(60);event('keyup','e','KeyE',69);await wait(1100);
-  check(scene.interaction.quote.alpha>.9&&scene.interaction.quote.text.includes('Şehir gece olunca başka türlü konuşuyor.'),'E shows the exact Turkish line');
+  check(scene.interaction.quote.alpha>.9&&scene.interaction.quote.text==='“Çocukken bu bankta simit yerdik.”','E shows the exact Turkish line');
+  check(game.registry.get('story:sawPoster')===true&&scene.posterCard.alpha<.05,'Walking past the lamp read Defne’s poster once and closed it');
   await wait(5200);check(scene.interaction.quote.alpha<.05,'Line fades out after one reading');
   await hold('d','KeyD',68,(PIER.maxX-player.x)/PIER.walkSpeed*1000+700);check(player.x===PIER.maxX,'Right world boundary holds');check(scene.interaction.prompt.alpha<.05,'Prompt hides away from bench');
   check(Math.abs(scene.cameras.main.scrollX-(PIER.width-PIER.viewWidth))<1,'Camera stops at the right scene boundary');

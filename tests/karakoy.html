@@ -23,6 +23,7 @@ document.querySelector('#run').onclick=async()=>{
   place(1620,592);await hold('w',1300);check(p.y===530,'Stair gate blocks further travel');
   place(1730,600);await hold('d',1200);check(p.x===1778,'End wall cannot be bypassed');
   place(300,590);await hold('s',1200);check(p.y===635,'Foreground stays outside the playable strip');
+  while(s.interaction.busy)await wait(100);
   place(860,592);await hold('e',70);await wait(1000);check(s.interaction.quote.alpha>.95&&s.interaction.quote.text.includes('Kepenk'),'Street observation displays');
   check(s.interaction.quote.scrollFactorX===0&&s.interaction.quote.scrollFactorY===0,'Observation UI stays fixed to the screen');
   output.textContent+='\nCOMPLETE — all street checks passed.';

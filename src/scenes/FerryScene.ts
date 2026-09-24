@@ -10,7 +10,12 @@ import {FerryWeather} from '../systems/FerryWeather';
 import {FerryInteractions} from '../systems/FerryInteractions';
 import {Ambience} from '../systems/Ambience';
 import {locationCaption} from '../utils/sceneUi';
-import {FERRY,DECK_BOUNDS,DECK_OBSTACLES,deckLight,deckLightOrigin} from './ferryConfig';
+import {FERRY,DECK_BOUNDS,DECK_OBSTACLES,MILK_CUP,PASSENGER_WITNESS,deckLight,deckLightOrigin} from './ferryConfig';
+import {promenadeDepth} from './promenade';
+import {createClueTextures} from '../assets/clues';
+import {StoryBeat} from '../story/StoryBeat';
+import {BEATS,FERRY_LINES,STORY_TIMES} from '../story/lines';
+import {hasFlag} from '../story/state';
 
 export class FerryScene extends Phaser.Scene{
  private player!:Player;
@@ -31,6 +36,7 @@ export class FerryScene extends Phaser.Scene{
  private arrived=false;
  private leaving=false;
  private arrivalAnnounced=false;
+ private witnessBeat!:StoryBeat;
  constructor(){super('FerryScene');}
  preload(){this.ambience=new Ambience(this,{},true);this.ambience.preload();}
  create(){
@@ -48,13 +54,16 @@ export class FerryScene extends Phaser.Scene{
   this.player=new Player(this,{startX:FERRY.startX,startY:FERRY.startY,facing:1,bounds:DECK_BOUNDS,obstacles:DECK_OBSTACLES,light:deckLight,lightOrigin:deckLightOrigin});
   this.passengers=new FerryPassengers(this);this.weather=new FerryWeather(this);
   this.interactions=new FerryInteractions(this,()=>this.disembark());
-  this.route=locationCaption(this,'KADIKÖY  →  KARAKÖY');
+  createClueTextures(this);
+  this.add.image(MILK_CUP.x,MILK_CUP.y,'clue-cup').setOrigin(.5,14/16).setDepth(promenadeDepth(MILK_CUP.y));
+  this.witnessBeat=new StoryBeat(this,this.interactions,()=>BEATS.ferryPassenger(hasFlag(this,'sawPoster')),p=>Math.abs(p.x-PASSENGER_WITNESS.x)<88,{x:PASSENGER_WITNESS.x,y:PASSENGER_WITNESS.y-120});
+  this.route=locationCaption(this,'KADIKÖY  →  KARAKÖY',STORY_TIMES.ferry);
   this.input.keyboard!.resetKeys();
-  this.game.canvas.setAttribute('aria-label','Son Vapur ferry deck. WASD or arrow keys to walk. E to look by the railing, inspect the cabin door or the Karaköy exit.');
+  this.game.canvas.setAttribute('aria-label','Son Vapur ferry deck. WASD or arrow keys to walk. E to look by the railing, under the bench, at the cabin door or the Karaköy exit.');
   this.input.once('pointerdown',()=>this.ambience.start());this.input.keyboard!.once('keydown',()=>this.ambience.start());
   this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>this.ambience.destroy());
   this.cameras.main.fadeIn(1000,8,21,30);
-  this.time.delayedCall(1200,()=>this.interactions.say('Kadıköy kıyıda kalıyor.'));
+  this.time.delayedCall(1200,()=>this.interactions.say(FERRY_LINES.intro));
  }
  update(_time:number,delta:number){
   if(!this.player)return;
@@ -77,9 +86,10 @@ export class FerryScene extends Phaser.Scene{
   this.water.update(dt,-this.drift/.3,speed*8);this.weather.update(dt,underway);this.passengers.update(dt);
   const mooring=docking>0&&docking<1?Math.sin(docking*Math.PI*4)*(1-docking)*.0018:0;
   this.cameras.main.setRotation(Math.sin(this.elapsed*.42)*.0006*underway+Math.sin(this.elapsed*13)*.00006*engine+mooring);
-  if(!this.leaving)this.interactions.update(this.player,this.arrived);
+  // The witness speaks when the traveller walks past, or by the time the waterfront appears.
+  if(!this.leaving){this.witnessBeat.update(this.player,approach>.2);this.interactions.update(this.player,this.arrived);}
   if(!this.arrived&&this.journey.arrived){this.arrived=true;this.route.setText('KARAKÖY İSKELESİ');}
-  if(this.arrived&&!this.arrivalAnnounced&&!this.interactions.busy){this.arrivalAnnounced=true;this.interactions.say('Karaköy’e yanaştık.');}
+  if(this.arrived&&!this.arrivalAnnounced&&!this.interactions.busy){this.arrivalAnnounced=true;this.interactions.say(FERRY_LINES.arrival);}
  }
  private disembark(){
   if(this.leaving||!this.arrived)return;

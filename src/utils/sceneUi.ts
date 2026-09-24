@@ -1,10 +1,20 @@
 import Phaser from 'phaser';
 import {SCENE_TIME} from '../scenes/config';
 
-/** Shared typography and safe placement for the existing three scenes. */
-export function locationCaption(scene:Phaser.Scene,label:string){
- scene.add.text(49,650,SCENE_TIME,{fontFamily:'Georgia, serif',fontSize:'25px',color:'#d6d4c2'}).setDepth(60).setScrollFactor(0);
+/** Shared typography and safe placement for the existing scenes. */
+export function locationCaption(scene:Phaser.Scene,label:string,time=SCENE_TIME){
+ scene.add.text(49,650,time,{fontFamily:'Georgia, serif',fontSize:'25px',color:'#d6d4c2'}).setDepth(60).setScrollFactor(0);
  return scene.add.text(50,684,label,{fontFamily:'Arial, sans-serif',fontSize:'10px',color:'#99abae'}).setDepth(60).setScrollFactor(0);
+}
+/** Shows lines one after another in the same screen-fixed text; each holds longer the longer it is. */
+export function playLines(scene:Phaser.Scene,text:Phaser.GameObjects.Text,lines:readonly string[],done?:()=>void,companions:Phaser.GameObjects.GameObject[]=[]){
+ const targets=[text,...companions];scene.tweens.killTweensOf(targets);
+ const next=(i:number)=>{
+  if(i>=lines.length){done?.();return;}
+  text.setText(lines[i]);for(const target of targets)(target as Phaser.GameObjects.Text).setAlpha(0);
+  scene.tweens.add({targets,alpha:1,duration:550,hold:1500+lines[i].length*45,yoyo:true,onComplete:()=>next(i+1)});
+ };
+ next(0);
 }
 export function lookPrompt(scene:Phaser.Scene){
  return scene.add.text(0,0,'[E]  Bak',{fontFamily:'Georgia, serif',fontSize:'15px',color:'#d5cfb5',backgroundColor:'#15242bbb',padding:{x:10,y:6}}).setOrigin(.5).setDepth(60).setAlpha(0);

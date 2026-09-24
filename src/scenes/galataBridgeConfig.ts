@@ -1,4 +1,5 @@
 import type {Obstacle} from './promenade';
+import {LOOKS} from '../story/lines';
 
 /** About 1.7 screens. The traveller enters from Karaköy (right) and walks toward Eminönü (left),
  * looking west up the Golden Horn: Eminönü and Süleymaniye ahead, Galata behind. */
@@ -42,9 +43,14 @@ export const BRIDGE_OBSTACLES:Obstacle[]=[
 /** Barrier panels across the walkway, sorted by their own ground contact. */
 export const BARRIER_PANELS=[{x:168,y:531},{x:160,y:575},{x:152,y:620}];
 export const BRIDGE_LOOKS=[
- {id:'railing',x:1770,y:524,radius:50,text:'Karşı kıyı düşündüğümden daha yakın.'},
- {id:'middle',x:BRIDGE.midX,y:560,radius:78,text:'İki yakanın ışıkları aynı suya düşüyor.'},
- {id:'fisher',x:656,y:548,radius:70,prompt:'[E]  Konuş',text:'Bu saatte balık değil, sabır tutulur.'},
+ {id:'railing',x:1770,y:524,radius:50,text:LOOKS.bridgeRailing},
+ {id:'middle',x:BRIDGE.midX,y:560,radius:78,text:LOOKS.bridgeMiddle},
+ {id:'fisher',x:656,y:548,radius:70,prompt:'[E]  Konuş',text:LOOKS.bridgeFisher},
 ];
 export function bridgeLight(x:number,y:number){return Math.min(1,BRIDGE_LIGHTS.reduce((sum,l)=>sum+Math.exp(-Math.pow((x-l.x)/140,2)-Math.pow((y-563)/100,2)),0));}
 export function bridgeLightOrigin(x:number){return BRIDGE_LIGHTS.reduce((a,b)=>Math.abs(a.x-x)<Math.abs(b.x-x)?a:b).x;}
+/** Story clues: the fisherman who feeds Ay, a fish head left behind, and prints passing under the barrier. */
+export const FISHER_WITNESS={x:656,y:548,range:110};
+export const FISH_HEAD={x:604,y:590};
+export const BRIDGE_PAW_TRAIL=[[590,594],[420,600],[240,606],[120,610],[20,612]] as const;
+export const BARRIER_CLUE_X=330;

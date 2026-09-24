@@ -6,7 +6,7 @@ import {join,resolve} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 const output=mkdtempSync(join(tmpdir(),'son-vapur-movement-'));
-execFileSync(process.execPath,['node_modules/typescript/bin/tsc','--target','ES2022','--module','commonjs','--skipLibCheck','--outDir',output,'src/entities/movement.ts','src/scenes/ferryConfig.ts','src/scenes/karakoyConfig.ts','src/scenes/galataBridgeConfig.ts','src/systems/FerryJourney.ts']);
+execFileSync(process.execPath,['node_modules/typescript/bin/tsc','--target','ES2022','--module','commonjs','--skipLibCheck','--outDir',output,'src/entities/movement.ts','src/scenes/ferryConfig.ts','src/scenes/karakoyConfig.ts','src/scenes/galataBridgeConfig.ts','src/systems/FerryJourney.ts','src/story/lines.ts']);
 const require=createRequire(import.meta.url);
 const {moveOnPromenade, movementTarget}=require(join(output,'entities/movement.js'));
 const {OBSTACLES,PIER_OBJECTS,WALK_AREA,FOOTPRINT,promenadeDepth}=require(join(output,'scenes/promenade.js'));
@@ -156,4 +156,12 @@ test('Bridge walk-in starts beyond the Karaköy edge and crosses open walkway',(
  assert.ok(BRIDGE.entryX>BRIDGE_BOUNDS.maxX&&BRIDGE.startX<=BRIDGE_BOUNDS.maxX);
  for(let x=BRIDGE.startX;x<=BRIDGE.entryX;x+=2)for(const o of BRIDGE_OBSTACLES)
   assert.ok(!(x>o.left-FOOTPRINT.halfWidth&&x<o.right+FOOTPRINT.halfWidth&&BRIDGE.startY>o.top-FOOTPRINT.halfDepth&&BRIDGE.startY<o.bottom+FOOTPRINT.halfDepth),o.id);
+});
+
+const story=require(join(output,'story/lines.js'));
+test('every story line fits on one screen line and every beat is short',()=>{
+ const lines=[...Object.values(story.LOOKS),...Object.values(story.FERRY_LINES)];
+ for(const beat of Object.values(story.BEATS))for(const seen of [false,true]){const sequence=beat(seen);assert.ok(sequence.length>=1&&sequence.length<=3);lines.push(...sequence);}
+ for(const line of lines)assert.ok(line.length<=72,line);
+ assert.ok(Object.values(story.STORY_TIMES).every(time=>/^\d\d:\d\d$/.test(time)));
 });

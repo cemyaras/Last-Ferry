@@ -1,4 +1,5 @@
 import type {Obstacle} from './promenade';
+import {LOOKS} from '../story/lines';
 
 export const KARAKOY={width:1920,height:720,startX:220,startY:592};
 /** Arriving passengers step out of the lit terminal door onto the lane. */
@@ -22,9 +23,13 @@ export const STREET_OBSTACLES:Obstacle[]=[
  {id:'shopkeeper',left:941,right:963,top:525,bottom:540},
 ];
 export const STREET_LOOKS=[
- {x:236,y:557,radius:83,text:'Son vapur arkamda kaldı.'},
- {x:866,y:543,radius:74,text:'Kepenk çoktan inmiş.'},
- {x:1658,y:542,radius:87,text:"Sokak Galata'ya doğru yükseliyor."},
+ {x:236,y:557,radius:83,text:LOOKS.karakoyTerminal},
+ {x:866,y:543,radius:74,text:LOOKS.karakoyShop},
+ {x:1658,y:542,radius:87,text:LOOKS.karakoyUphill},
 ];
 export function streetLight(x:number,y:number){return Math.min(1,STREET_LIGHTS.reduce((sum,l)=>sum+Math.exp(-Math.pow((x-l.x)/136,2)-Math.pow((y-563)/100,2)),0));}
 export function streetLightOrigin(x:number){return STREET_LIGHTS.reduce((a,b)=>Math.abs(a.x-x)<Math.abs(b.x-x)?a:b).x;}
+/** Story clues: the resident waiting by the terminal, an empty bowl at the watchmaker's, and prints to the bridge. */
+export const RESIDENT_WITNESS={x:347,y:541,range:150};
+export const FOOD_BOWL={x:886,y:548};
+export const KARAKOY_PAW_TRAIL=[[872,556],[760,574],[560,590],[380,598],[130,602],[30,604]] as const;

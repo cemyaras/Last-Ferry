@@ -9,7 +9,12 @@ import {Interaction,type LookPoint} from '../systems/Interaction';
 import {Ambience} from '../systems/Ambience';
 import {BridgeMotion} from '../systems/BridgeMotion';
 import {locationCaption} from '../utils/sceneUi';
-import {BRIDGE,BRIDGE_BOUNDS,BRIDGE_OBSTACLES,BRIDGE_LIGHTS,BRIDGE_LOOKS,bridgeLight,bridgeLightOrigin} from './galataBridgeConfig';
+import {BRIDGE,BRIDGE_BOUNDS,BRIDGE_OBSTACLES,BRIDGE_LIGHTS,BRIDGE_LOOKS,FISHER_WITNESS,FISH_HEAD,BRIDGE_PAW_TRAIL,BARRIER_CLUE_X,bridgeLight,bridgeLightOrigin} from './galataBridgeConfig';
+import {promenadeDepth} from './promenade';
+import {addPawTrail,createClueTextures} from '../assets/clues';
+import {StoryBeat} from '../story/StoryBeat';
+import {BEATS,STORY_TIMES} from '../story/lines';
+import {hasFlag} from '../story/state';
 
 type ScreenLayer={object:Phaser.GameObjects.Components.Transform;x:number;y:number;scaleX:number;scaleY:number};
 
@@ -27,6 +32,7 @@ export class GalataBridgeScene extends Phaser.Scene{
  private widenMix=0;
  private screenLayers:ScreenLayer[]=[];
  private appliedZoom=1;
+ private beats:StoryBeat[]=[];
  constructor(){super('GalataBridgeScene');}
  init(data:{from?:string}={}){this.arriving=data.from==='KarakoyScene';this.widening=false;this.widenMix=0;this.appliedZoom=1;}
  preload(){this.ambience=new Ambience(this);this.ambience.preload();}
@@ -45,7 +51,14 @@ export class GalataBridgeScene extends Phaser.Scene{
   this.atmosphere=new Atmosphere(this,{width:BRIDGE.width,lamps:BRIDGE_LIGHTS,texturePrefix:'bridge-',terminalGlow:false,wind:.3});
   const points:LookPoint[]=BRIDGE_LOOKS.map(point=>point.id==='middle'?{...point,onLook:()=>this.widen()}:point);
   this.interaction=new Interaction(this,points);
-  locationCaption(this,'G A L A T A   K Ö P R Ü S Ü');
+  createClueTextures(this);
+  this.add.image(FISH_HEAD.x,FISH_HEAD.y,'clue-fishhead').setOrigin(.5,9/12).setDepth(promenadeDepth(FISH_HEAD.y));
+  addPawTrail(this,'bridge-paw-trail',BRIDGE_PAW_TRAIL,10.6,733);
+  this.beats=[
+   new StoryBeat(this,this.interaction,BEATS.bridgeFisher,p=>Math.abs(p.x-FISHER_WITNESS.x)<FISHER_WITNESS.range,{x:FISHER_WITNESS.x,y:FISHER_WITNESS.y-122}),
+   new StoryBeat(this,this.interaction,()=>BEATS.bridgeBarrier(hasFlag(this,'sawPoster')),p=>p.x<BARRIER_CLUE_X),
+  ];
+  locationCaption(this,'G A L A T A   K Ö P R Ü S Ü',STORY_TIMES.bridge);
   // Vertical margin lets the brief wide view zoom out around the horizon instead of clamping upward.
   this.cameras.main.setZoom(1).setBounds(0,-80,BRIDGE.width,BRIDGE.height+160).setScroll(BRIDGE.width-1280,0);
   this.input.keyboard!.resetKeys();
@@ -67,7 +80,7 @@ export class GalataBridgeScene extends Phaser.Scene{
   camera.scrollX=Phaser.Math.Linear(camera.scrollX,Phaser.Math.Linear(follow,BRIDGE.midX-640,this.widenMix),1-Math.exp(-dt*1.8));
   this.holdScreenLayers();
   this.water.update(dt,camera.scrollX);this.atmosphere.update(dt);this.motion.update(dt);this.locals.update(dt,this.motion.gust);
-  if(!this.player.boardingTarget)this.interaction.update(this.player);
+  if(!this.player.boardingTarget){for(const beat of this.beats)beat.update(this.player);this.interaction.update(this.player);}
  }
  /** From the opening span, the view briefly widens to hold both shores, then settles back. */
  private widen(){

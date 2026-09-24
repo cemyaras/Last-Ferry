@@ -7,7 +7,13 @@ import {Atmosphere} from '../systems/Atmosphere';
 import {Interaction} from '../systems/Interaction';
 import {Boarding} from '../systems/Boarding';
 import {Ambience} from '../systems/Ambience';
-import {PIER,PARALLAX,SCENE_TIME} from './config';
+import {PIER,PARALLAX,SCENE_TIME,POSTER_SPOT} from './config';
+import {PIER_OBJECTS,promenadeDepth} from './promenade';
+import {createClueTextures} from '../assets/clues';
+import {StoryBeat} from '../story/StoryBeat';
+import {BEATS,LOOKS} from '../story/lines';
+import {setFlag} from '../story/state';
+const BENCH=PIER_OBJECTS.find(object=>object.id==='bench-0')!;
 export class PierScene extends Phaser.Scene{
  private player!:Player;
  private water!:Water;
@@ -17,6 +23,8 @@ export class PierScene extends Phaser.Scene{
  private ambience!:Ambience;
  private movementHint!:Phaser.GameObjects.Text;
  private hintDismissed=false;
+ private posterCard!:Phaser.GameObjects.Image;
+ private posterBeat!:StoryBeat;
  constructor(){super('pier');}
  preload(){this.ambience=new Ambience(this);this.ambience.preload();}
  create(){
@@ -31,12 +39,20 @@ export class PierScene extends Phaser.Scene{
   this.add.image(0,0,'foreground').setOrigin(0).setDepth(30).setScrollFactor(PARALLAX.foreground);
   this.player=new Player(this);
   this.atmosphere=new Atmosphere(this);
-  this.interaction=new Interaction(this);
-  this.boarding=new Boarding(this,this.player,()=>this.interaction.hide());
+  createClueTextures(this);
+  this.add.image(POSTER_SPOT.x,POSTER_SPOT.y,'clue-poster').setDepth(promenadeDepth(517)+.002).setRotation(-.05);
+  this.posterCard=this.add.image(1010,250,'clue-poster-card').setDepth(59).setScrollFactor(0).setRotation(-.035).setTint(0xd6d0bd).setAlpha(0);
+  this.interaction=new Interaction(this,[
+   {x:PIER.benchX,y:BENCH.sortY,radius:PIER.interactionRadius,text:LOOKS.kadikoyBench},
+   {x:POSTER_SPOT.x,y:POSTER_SPOT.readY,radius:POSTER_SPOT.readRadius,prompt:'[E]  Oku',onLook:()=>this.readPoster()},
+  ]);
+  // The first pass reads the poster by itself; E reads it again.
+  this.posterBeat=new StoryBeat(this,{get busy(){return false;},say:()=>this.readPoster()},()=>[],p=>Math.abs(p.x-POSTER_SPOT.x)<POSTER_SPOT.noticeRange);
+  this.boarding=new Boarding(this,this.player,()=>{this.interaction.hide();this.tweens.killTweensOf(this.posterCard);this.posterCard.setAlpha(0);});
   this.createType();
   this.cameras.main.setBounds(0,0,PIER.width,PIER.height);
   this.cameras.main.scrollX=Phaser.Math.Clamp(this.player.x-PIER.viewWidth*.48,0,PIER.width-PIER.viewWidth);
-  const canvas=this.game.canvas;canvas.setAttribute('tabindex','0');canvas.setAttribute('aria-label','Son Vapur. W / A / S / D or arrow keys: walk along and across the promenade. E near the bench: look. E at the left ferry pier: board for Karaköy.');
+  const canvas=this.game.canvas;canvas.setAttribute('tabindex','0');canvas.setAttribute('aria-label','Son Vapur. W / A / S / D or arrow keys: walk along and across the promenade. E at the lamp poster: read. E near the bench: look. E at the left ferry pier: board for Karaköy.');
   this.input.once('pointerdown',()=>this.ambience.start());
   this.input.keyboard!.once('keydown',()=>this.ambience.start());
   this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>this.ambience.destroy());
@@ -56,6 +72,13 @@ export class PierScene extends Phaser.Scene{
   const target=Phaser.Math.Clamp(this.player.x-PIER.viewWidth*.48,0,PIER.width-PIER.viewWidth);
   camera.scrollX=Phaser.Math.Linear(camera.scrollX,target,1-Math.exp(-dt*1.8));
   if(!this.hintDismissed&&Math.hypot(this.player.velocity,this.player.velocityY)>8){this.hintDismissed=true;this.tweens.add({targets:this.movementHint,alpha:0,delay:650,duration:1600});}
-  this.water.update(dt,camera.scrollX);this.atmosphere.update(dt);if(this.boarding.state==='waiting')this.interaction.update(this.player,interactPressed);
+  this.water.update(dt,camera.scrollX);this.atmosphere.update(dt);if(this.boarding.state==='waiting'){if(!this.interaction.busy)this.posterBeat.update(this.player);this.interaction.update(this.player,interactPressed);}
+ }
+ /** Defne's poster, shown up close while the traveller's first thought plays. */
+ private readPoster(){
+  if(this.interaction.busy)return;
+  setFlag(this,'sawPoster');
+  this.tweens.killTweensOf(this.posterCard);this.tweens.add({targets:this.posterCard,alpha:1,duration:450});
+  this.interaction.say(BEATS.poster(),()=>this.tweens.add({targets:this.posterCard,alpha:0,duration:600}));
  }
 }

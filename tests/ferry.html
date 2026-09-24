@@ -26,10 +26,14 @@ document.querySelector('#run').onclick=async()=>{
   place(600,590);await hold('w',900);check(p.y===561,'Bench blocks feet');
   place(540,506);await hold('d',1500);check(p.x>680&&p.visual.depth<s.children.getByName('ferry-bench').depth,'Traveller passes behind the bench with Y sorting');
   place(893,550);await hold('w',900);check(p.y===525,'Standing passenger has a footprint');
+  check(s.witnessBeat.done,'Walking past the standing passenger plays the witness beat');
   place(800,530);while(s.interactions.activeLine)await wait(100);
-  await hold('e',60);await wait(650);check(s.interactions.line.text==='“Boğaz geceleri her şeyi biraz uzaklaştırıyor.”'&&s.interactions.line.alpha>.9,'Railing shows the exact requested line');
+  await hold('e',60);await wait(650);check(s.interactions.line.text==='“Martılara simit atardık. Hepsi kavga ederdi.”'&&s.interactions.line.alpha>.9,'Railing shows the exact requested line');
   while(s.interactions.activeLine)await wait(100);
   place(270,560);await hold('e',60);await wait(650);check(s.interactions.line.text.includes('Salon kapısı kapalı'),'Cabin explains limited interior access');
+  while(s.interactions.activeLine)await wait(100);
+  place(596,578);await wait(150);check(s.interactions.prompt.alpha>.9,'Milk cup under the bench offers a look');
+  await hold('e',60);await wait(650);check(s.interactions.line.text.includes('süt bardağı'),'Milk cup line displays');
   check(s.skyline.x<0&&s.drift>0,'Skyline drifts during the crossing');
   while(!s.arrived)await wait(150);while(s.interactions.activeLine)await wait(100);
   check(s.ambience.hornPlayed&&s.hornSounded,'Arrival horn has played once during approach');

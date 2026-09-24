@@ -53,12 +53,16 @@ document.querySelector('#run').onclick=async()=>{
   place(1240,600);await hold('w',1500);check(p.y===552,'Bench blocks approach from the front');
   place(1150,524);await hold('d',1800);check(p.x>1300&&p.visual.depth<obj('bridge-bench').depth,'Traveller can slip behind the bench and is occluded');
   place(1345,600);await hold('w',1500);check(p.y===539,'Umbrella pedestrian has a footprint');
-  const look=async(point,text)=>{place(point.x,point.y);await wait(420);check(s.interaction.prompt.alpha>.9&&s.interaction.prompt.text===(point.prompt??'[E]  Bak'),`${point.id} prompt reads ${point.prompt??'[E]  Bak'}`);await hold('e',60);await wait(1000);check(s.interaction.quote.alpha>.9&&s.interaction.quote.text.includes(text),`${point.id} line displays`);};
+  while(s.interaction.busy)await wait(100);
+  if(!s.beats[0].done){place(700,600);await wait(300);}
+  check(s.beats[0].done,'Passing the fisherman plays his beat about the white cat');
+  check(s.beats[1].done,'Reaching the barrier notices the paw prints passing under it');
+  const look=async(point,text)=>{while(s.interaction.busy)await wait(100);place(point.x,point.y);await wait(420);check(s.interaction.prompt.alpha>.9&&s.interaction.prompt.text===(point.prompt??'[E]  Bak'),`${point.id} prompt reads ${point.prompt??'[E]  Bak'}`);await hold('e',60);await wait(1000);check(s.interaction.quote.alpha>.9&&s.interaction.quote.text.includes(text),`${point.id} line displays`);};
   const [railing,middle,fisher]=BRIDGE_LOOKS;
   await look(railing,'Karşı kıyı');while(s.interaction.showing)await wait(100);
   place(railing.x,600);await wait(420);check(s.interaction.prompt.alpha<.05,'Railing look needs the traveller at the railing');
   await look(fisher,'sabır');while(s.interaction.showing)await wait(100);
-  await look(middle,'İki yaka');
+  await look(middle,'Gökteki ay');
   check(s.cameras.main.zoom<.95,'Middle of the bridge widens the view');
   const quote=s.interaction.quote.getBounds();check(Math.abs(quote.centerX-640)<2&&quote.bottom<720,'Screen text stays fixed while zoomed');
   while(s.interaction.showing||s.widening)await wait(100);await wait(300);

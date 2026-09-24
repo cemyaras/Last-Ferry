@@ -60,6 +60,12 @@ All artwork is generated locally in code. No downloaded images, fonts or audio. 
 
 The arrival has one quiet, procedurally synthesized two-tone ferry horn. Audio unlocks after a keyboard or pointer gesture on the ferry; there are no downloaded sound assets. Other ambience remains silent. `Ambience` accepts an optional manifest with `rain`, `water`, `ferry-horn`, `seagulls` and `city` channels. Supply `{ url, volume, loop }` entries when original audio is available. The scene preloads the manifest and starts looping tracks after a keyboard or pointer gesture. Non-looping tracks are triggered with `play(channel)`. Audio objects are cleaned up when the scene shuts down.
 
+## 🌙 Hikâye: "Kayıp: Ay"
+
+Yıllar sonra İstanbul'a dönen bir yolcu, Kadıköy'de bir lamba direğine asılmış çocuk yazısıyla bir ilan görür: "KAYIP: AY. Her gece çıkıp gidiyor." Önce gökteki ayı sanır. Vapurda bir yolcu "beyaz bir şeyin" atladığını söyler ve bankın altında boş bir süt bardağı durur. Karaköy'de iskelede bekleyen adam beyaz bir kedinin her gece son vapurdan indiğini anlatır; saatçinin önünde boş bir mama kabı ve köprüye giden pati izleri vardır. Köprüde balıkçı her gece ona balık attığını söyler, izler bakım bariyerinin altından Eminönü'ye geçer. Ay finale kadar görünmez; Eminönü ve şafak sahnesi henüz yapılmadı.
+
+Kilit anlar kaçırılamaz ama kendiliğinden gelir: yolcu yanından geçerken kısa bir satır sekansı oynar, konuşan kişinin üstünde "···" belirir. Çıkışlar hiçbir zaman kilitlenmez. İç ses tırnak içinde, konuşmalar tire ile gösterilir. Ekrandaki saat gecenin ilerleyişini izler: 23:40, 23:55, 00:20, 01:10. Tüm metin `src/story/lines.ts` dosyasında; `src/story/StoryBeat.ts` tek seferlik anları, `src/story/state.ts` ilanın okunup okunmadığını tutar (yalnızca satır varyasyonu için, arayüzü yok). İpucu çizimleri `src/assets/clues.ts` içindedir.
+
 ## 🎯 Scope
 
 Kadıköy pier, one compact ferry deck, a 1920-pixel (1.5-screen) Karaköy lane and a 2176-pixel (1.7-screen) stretch of Galata Bridge. The deck has two passengers; the street has a waiting resident and a shopkeeper; the bridge has three fishermen and one pedestrian. Each location offers at most three brief observations. Eminönü is not built yet. No quests, inventory, saves, combat, menus or dialogue trees.

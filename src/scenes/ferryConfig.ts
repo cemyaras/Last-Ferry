@@ -15,3 +15,7 @@ export const DECK_OBSTACLES:Obstacle[]=[
 export const DECK_LIGHTS=[{x:190,y:377},{x:390,y:332},{x:1012,y:374}];
 export function deckLight(x:number,y:number){return Math.min(1,DECK_LIGHTS.reduce((value,lamp)=>value+Math.exp(-Math.pow((x-lamp.x)/155,2)-Math.pow((y-556)/120,2)),0));}
 export function deckLightOrigin(x:number){return DECK_LIGHTS.reduce((a,b)=>Math.abs(a.x-x)<Math.abs(b.x-x)?a:b).x;}
+/** Story clue: an empty paper cup of milk just in front of the deck bench. */
+export const MILK_CUP={x:596,y:559};
+/** The standing passenger saw something white leap aboard. */
+export const PASSENGER_WITNESS={x:893,y:517};
