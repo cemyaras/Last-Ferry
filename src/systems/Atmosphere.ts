@@ -16,6 +16,9 @@ export class Atmosphere{
  private drops:{x:number;y:number;speed:number;length:number;alpha:number;layer:number}[]=[];
  private splashes:{x:number;y:number;phase:number}[]=[];
  private elapsed=0;
+ private lampLight:Phaser.GameObjects.Image[]=[];
+ /** 0 is night; 1 is dawn with the lamps off and the rain stopped. */
+ daylight=0;
  constructor(scene:Phaser.Scene,private environment:AtmosphereEnvironment={width:PIER.width,lamps:LAMPS,texturePrefix:'',terminalGlow:true}){
   const {width,lamps,texturePrefix}=environment;
   const key=(name:string)=>texturePrefix+name;
@@ -31,7 +34,7 @@ export class Atmosphere{
    }
    if(environment.terminalGlow)glow(c,150,474,147,'#d4b57212');
   });
-  scene.add.image(0,0,key('lighting')).setOrigin(0).setDepth(25);
+  this.lampLight.push(scene.add.image(0,0,key('lighting')).setOrigin(0).setDepth(25));
   texture(scene,'lamp-halo',240,240,c=>{glow(c,120,120,112,'#e7bd6725');glow(c,120,120,35,'#ffd58b38');glow(c,120,120,12,'#f8daa153');});
   for(const {x,y} of lamps)this.lampHalos.push(scene.add.image(x,y+6,'lamp-halo').setDepth(26));
   this.wetLight=scene.add.graphics().setDepth(13);
@@ -41,7 +44,7 @@ export class Atmosphere{
    // Long softly broken shadows from the railing.
    for(let x=413;x<width;x+=48)polygon(c,[[x,519],[x+2,519],[x+(x-780)*.16,603],[x+(x-780)*.16-3,603]],'#0314210d');
   });
-  scene.add.image(0,0,key('reflections')).setOrigin(0).setDepth(12);
+  this.lampLight.push(scene.add.image(0,0,key('reflections')).setOrigin(0).setDepth(12));
   this.rain=[6,24,40].map(depth=>scene.add.graphics().setDepth(depth).setScrollFactor(0));this.ripples=scene.add.graphics().setDepth(14);this.gulls=scene.add.graphics().setDepth(1.5).setScrollFactor(.2);
   const r=random(270);for(let layer=0;layer<3;layer++)for(let i=0;i<[105,66,8][layer];i++)this.drops.push({x:r()*1340,y:r()*720,speed:135+layer*125+r()*60,length:4+layer*6+r()*5,alpha:.045+layer*.022+r()*.035,layer});
   for(let i=0;i<48;i++)this.splashes.push({x:r()*width,y:530+r()*158,phase:r()*6});
@@ -52,22 +55,23 @@ export class Atmosphere{
  }
  update(dt:number){this.elapsed+=dt;const t=this.elapsed;this.clouds.x=-160+Math.sin(t*.018)*90;this.haze.x=-110+Math.sin(t*.04)*32;
   for(const layer of this.rain)layer.clear();
+  const night=1-this.daylight;for(const image of this.lampLight)image.setAlpha(night);
   const wind=this.environment.wind,drift=wind?wind*windGust(t):.12,slant=drift/.12;
-  for(const d of this.drops){d.y+=d.speed*dt;d.x-=d.speed*drift*dt;if(d.y>745){d.y=-20;d.x=(d.x+421)%1340;}if(d.x< -10)d.x=1300;const g=this.rain[d.layer];g.lineStyle(.45+d.layer*.22,0xb8ced3,d.alpha);g.lineBetween(d.x,d.y,d.x-(1.6+d.layer)*slant,d.y+d.length);}
+  for(const d of this.drops){d.y+=d.speed*dt;d.x-=d.speed*drift*dt;if(d.y>745){d.y=-20;d.x=(d.x+421)%1340;}if(d.x< -10)d.x=1300;const g=this.rain[d.layer];g.lineStyle(.45+d.layer*.22,0xb8ced3,d.alpha*night);g.lineBetween(d.x,d.y,d.x-(1.6+d.layer)*slant,d.y+d.length);}
   this.wetLight.clear();
   this.environment.lamps.forEach(({x},i)=>{
    // A rare, small voltage dip; no regular pulsing.
    const phase=(t+i*19)%83;const dip=phase>57&&phase<57.42?Math.sin((phase-57)/.42*Math.PI)**2*.13:0;
-   this.lampHalos[i].setAlpha(1-dip);
+   this.lampHalos[i].setAlpha((1-dip)*night);
    for(let j=0;j<49;j++){
     const y=530+j*3.05;const wave=Math.sin(t*.9+j*2.13+i)*3.2;
     const width=3+(y-520)*.22;const offset=Math.sin(j*23.1+i)*width;
-    const alpha=(.045+Math.sin(j*7.4+t*.75)**2*.07)*(1-j/60)*(1-dip);
+    const alpha=(.045+Math.sin(j*7.4+t*.75)**2*.07)*(1-j/60)*(1-dip)*night;
     this.wetLight.lineStyle(.8+(j%3)*.3,0xd6b579,alpha);
     this.wetLight.lineBetween(x+offset-width*.6+wave,y,x+offset+width*.6+wave,y);
    }
   });
-  this.ripples.clear();for(const s of this.splashes){const p=(t*.65+s.phase)%3;if(p<1){this.ripples.lineStyle(.7,0x9aafa9,(1-p)*.14);this.ripples.strokeEllipse(s.x,s.y,2+p*12,1+p*3);}}
+  this.ripples.clear();for(const s of this.splashes){const p=(t*.65+s.phase)%3;if(p<1){this.ripples.lineStyle(.7,0x9aafa9,(1-p)*.14*night);this.ripples.strokeEllipse(s.x,s.y,2+p*12,1+p*3);}}
   this.gulls.clear();const cycle=t%38;if(cycle>12&&cycle<29){for(let i=0;i<2;i++){const x=1750-(cycle-12)*115-i*32,y=203+i*21+Math.sin(t*.9+i)*4,wing=Math.sin(t*4+i)*3;this.gulls.lineStyle(1.2,0x101f29,.65);this.gulls.beginPath();this.gulls.moveTo(x-6,y-wing);this.gulls.lineTo(x,y);this.gulls.lineTo(x+6,y-wing);this.gulls.strokePath();}}
  }
 }

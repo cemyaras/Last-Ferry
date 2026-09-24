@@ -42,13 +42,13 @@ document.querySelector('#run').onclick=async()=>{
   place(1770,560);await hold('up',1500);check(p.y===BRIDGE_BOUNDS.minY,'Railing stops the traveller at the rail edge');
   place(1770,600);await hold('s',1500);check(p.y===BRIDGE_BOUNDS.maxY,'Kerb keeps the traveller off the tram road');
   place(2060,600);await hold('d',900);check(p.x===BRIDGE_BOUNDS.maxX,'Karaköy end is bounded');
-  place(300,600);await hold('a',1400);check(p.x===BRIDGE_BOUNDS.minX,'Eminönü barrier blocks the walkway');
+  place(300,570);await hold('a',1400);check(p.x===BRIDGE_BOUNDS.minX,'Eminönü barrier blocks the walkway');
   check(obj('barrier-0').getBounds().right<p.x-12,'Barrier panels stay clear of the traveller at the boundary');
   place(656,600);await hold('w',1500);check(p.y===559,'Talk fisherman has a solid footprint');
   place(600,530);await hold('d',1300);check(p.x>700&&p.y===530,'Traveller can pass behind the fisherman standing back from the rail');
   place(656,530);await wait(120);check(p.visual.depth<obj('fisher-talk').depth,'Passing behind renders behind him');
   place(656,600);await wait(120);check(p.visual.depth>obj('fisher-talk').depth,'Passing in front renders in front');
-  place(318,600);await hold('w',1500);check(p.y===540,'Fisherman at the rail cannot be walked through');
+  place(318,588);await hold('w',1500);check(p.y===540,'Fisherman at the rail cannot be walked through');
   place(1556,600);await hold('w',1500);check(p.y===550,'Seated fisherman and stool are solid');
   place(1240,600);await hold('w',1500);check(p.y===552,'Bench blocks approach from the front');
   place(1150,524);await hold('d',1800);check(p.x>1300&&p.visual.depth<obj('bridge-bench').depth,'Traveller can slip behind the bench and is occluded');
@@ -56,7 +56,7 @@ document.querySelector('#run').onclick=async()=>{
   while(s.interaction.busy)await wait(100);
   if(!s.beats[0].done){place(700,600);await wait(300);}
   check(s.beats[0].done,'Passing the fisherman plays his beat about the white cat');
-  check(s.beats[1].done,'Reaching the barrier notices the paw prints passing under it');
+  check(s.beats[1].done,'Approaching the stairs notices the paw prints going down');
   const look=async(point,text)=>{while(s.interaction.busy)await wait(100);place(point.x,point.y);await wait(420);check(s.interaction.prompt.alpha>.9&&s.interaction.prompt.text===(point.prompt??'[E]  Bak'),`${point.id} prompt reads ${point.prompt??'[E]  Bak'}`);await hold('e',60);await wait(1000);check(s.interaction.quote.alpha>.9&&s.interaction.quote.text.includes(text),`${point.id} line displays`);};
   const [railing,middle,fisher]=BRIDGE_LOOKS;
   await look(railing,'Karşı kıyı');while(s.interaction.showing)await wait(100);

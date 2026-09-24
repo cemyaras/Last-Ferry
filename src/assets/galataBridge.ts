@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import {type Ctx,texture,random,polygon,line,ellipse,glow,label} from '../utils/drawing';
 import {mosque,bench,lamp} from './environment';
+import {createStairwell} from './stairs';
 import {promenadeDepth} from '../scenes/promenade';
-import {BRIDGE,BRIDGE_LIGHTS,BRIDGE_PROPS,BARRIER_PANELS,PROPPED_RODS} from '../scenes/galataBridgeConfig';
+import {BRIDGE,BRIDGE_LIGHTS,BRIDGE_PROPS,BARRIER_PANELS,PROPPED_RODS,STAIRS} from '../scenes/galataBridgeConfig';
 
 const W=BRIDGE.width,MID=BRIDGE.midX;
 /** Top of the flagpole on the Eminönü-side control house of the opening span. */
@@ -158,4 +159,5 @@ export function createGalataBridge(scene:Phaser.Scene){
  BARRIER_PANELS.forEach(({x,y},i)=>scene.add.image(x,y,'galata-barrier').setOrigin(.5,53/56).setDepth(promenadeDepth(y)).setName(`barrier-${i}`));
  scene.add.image(76,560,'galata-closed-sign').setOrigin(.5,93/96).setDepth(promenadeDepth(560));
  scene.add.image(-70,0,'galata-road').setOrigin(0).setDepth(30).setScrollFactor(1.04);
+ createStairwell(scene,'galata',STAIRS,'kerb',['↓ ALT KAT','EMİNÖNÜ']);
 }

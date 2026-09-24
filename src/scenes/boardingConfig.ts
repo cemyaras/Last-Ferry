@@ -4,4 +4,5 @@ export const BOARDING={
  ferryX:660,ferryY:484,cabinX:566,deckY:446,
  radiusX:45,radiusY:34,
 };
-export function withinBoardingReach(x:number,y:number){return Math.abs(x-BOARDING.gateX)<=BOARDING.radiusX&&Math.abs(y-BOARDING.approachY)<=BOARDING.radiusY;}
+export type BoardingLayout=typeof BOARDING;
+export function withinBoardingReach(x:number,y:number,layout:BoardingLayout=BOARDING){return Math.abs(x-layout.gateX)<=layout.radiusX&&Math.abs(y-layout.approachY)<=layout.radiusY;}

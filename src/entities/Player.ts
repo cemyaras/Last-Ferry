@@ -5,7 +5,8 @@ import {promenadeDepth} from '../scenes/promenade';
 import {type Obstacle} from '../scenes/promenade';
 import {type WalkBounds,movementTarget,moveOnPromenade} from './movement';
 import {BOARDING} from '../scenes/boardingConfig';
-export interface PlayerEnvironment{startX:number;startY:number;facing:number;obstacles:readonly Obstacle[];bounds:WalkBounds;light:(x:number,y:number)=>number;lightOrigin:(x:number)=>number;}
+/** `boarding` places the gangway door for the authored boarding walk; it defaults to Kadıköy's. */
+export interface PlayerEnvironment{startX:number;startY:number;facing:number;obstacles:readonly Obstacle[];bounds:WalkBounds;light:(x:number,y:number)=>number;lightOrigin:(x:number)=>number;boarding:{cabinX:number;deckY:number};}
 export class Player {
  x=PIER.startX; y=PIER.walkY; velocity=0; velocityY=0; facing=-1; private phase=0;private idleTime=0;
  boardingTarget?:{x:number;y:number};
@@ -62,8 +63,9 @@ export class Player {
   const light=this.environment.light?.(this.x,this.y)??lampStrength(this.x)*Math.exp(-Math.pow((this.y-567)/85,2));
   // In warm pools the coat catches a restrained rim and the shadow falls away from the lamp.
   const idleScale=walking?1:1+Math.sin(this.idleTime*1.4)*.004;
-  const perspective=this.boardingTarget?Phaser.Math.Linear(.98,.44,Phaser.Math.Clamp((525-this.y)/(525-BOARDING.deckY),0,1)):.98;
-  const entranceAlpha=this.boardingTarget&&this.y<=BOARDING.deckY+.8?1-Phaser.Math.Clamp((this.x-BOARDING.cabinX)/10,0,1):1;
+  const gangway=this.environment.boarding??BOARDING;
+  const perspective=this.boardingTarget?Phaser.Math.Linear(.98,.44,Phaser.Math.Clamp((525-this.y)/(525-gangway.deckY),0,1)):.98;
+  const entranceAlpha=this.boardingTarget&&this.y<=gangway.deckY+.8?1-Phaser.Math.Clamp((this.x-gangway.cabinX)/10,0,1):1;
   this.visual.setAlpha(entranceAlpha);
   this.visual.setScale(perspective,perspective*idleScale).setRotation(walking?Math.sin(this.phase)*.004:Math.sin(this.idleTime*.7)*.007);
   this.rim.setTexture(`traveller-rim-${frame}`).setPosition(this.visual.x,this.visual.y).setFlipX(this.facing<0).setScale(this.visual.scaleX,this.visual.scaleY).setRotation(this.visual.rotation).setAlpha((.06+light*.42)*entranceAlpha);

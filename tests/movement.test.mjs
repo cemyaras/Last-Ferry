@@ -6,7 +6,7 @@ import {join,resolve} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 const output=mkdtempSync(join(tmpdir(),'son-vapur-movement-'));
-execFileSync(process.execPath,['node_modules/typescript/bin/tsc','--target','ES2022','--module','commonjs','--skipLibCheck','--outDir',output,'src/entities/movement.ts','src/scenes/ferryConfig.ts','src/scenes/karakoyConfig.ts','src/scenes/galataBridgeConfig.ts','src/systems/FerryJourney.ts','src/story/lines.ts']);
+execFileSync(process.execPath,['node_modules/typescript/bin/tsc','--target','ES2022','--module','commonjs','--skipLibCheck','--outDir',output,'src/entities/movement.ts','src/scenes/ferryConfig.ts','src/scenes/karakoyConfig.ts','src/scenes/galataBridgeConfig.ts','src/scenes/eminonuConfig.ts','src/systems/FerryJourney.ts','src/story/lines.ts']);
 const require=createRequire(import.meta.url);
 const {moveOnPromenade, movementTarget}=require(join(output,'entities/movement.js'));
 const {OBSTACLES,PIER_OBJECTS,WALK_AREA,FOOTPRINT,promenadeDepth}=require(join(output,'scenes/promenade.js'));
@@ -135,14 +135,14 @@ test('Karaköy lane end leads to the bridge without catching the ferry arrival w
  assert.ok(Math.hypot(end.x-BRIDGE_EXIT.x,end.y-BRIDGE_EXIT.y)<BRIDGE_EXIT.radius);
  for(const p of ARRIVAL_PATH)assert.ok(Math.hypot(p.x-BRIDGE_EXIT.x,p.y-BRIDGE_EXIT.y)>BRIDGE_EXIT.radius);
 });
-const {BRIDGE,BRIDGE_BOUNDS,BRIDGE_OBSTACLES,BRIDGE_LOOKS}=require(join(output,'scenes/galataBridgeConfig.js'));
+const {BRIDGE,BRIDGE_BOUNDS,BRIDGE_OBSTACLES,BRIDGE_LOOKS,STAIRS}=require(join(output,'scenes/galataBridgeConfig.js'));
 test('Galata Bridge stays bounded, footprints are solid and all three looks are reachable',()=>{
  const move=(x,y,dx,dy)=>moveOnPromenade(x,y,dx,dy,BRIDGE_OBSTACLES,BRIDGE_BOUNDS);
  assert.equal(move(1000,600,0,-1000).y,BRIDGE_BOUNDS.minY);
  assert.equal(move(1000,600,0,1000).y,BRIDGE_BOUNDS.maxY);
  assert.equal(move(1800,600,10000,0).x,BRIDGE_BOUNDS.maxX);
- assert.equal(move(1800,600,-10000,0).x,BRIDGE_BOUNDS.minX);
- for(const box of BRIDGE_OBSTACLES.filter(b=>(b.left+b.right)/2>=BRIDGE_BOUNDS.minX)){
+ assert.equal(move(1800,570,-10000,0).x,BRIDGE_BOUNDS.minX);
+ for(const box of BRIDGE_OBSTACLES.filter(b=>(b.left+b.right)/2>=BRIDGE_BOUNDS.minX&&b.id!=='stairwell')){
   const x=(box.left+box.right)/2;
   assert.ok(move(x,625,0,-500).y>=Math.max(BRIDGE_BOUNDS.minY,box.bottom+FOOTPRINT.halfDepth),box.id);
  }
@@ -164,4 +164,37 @@ test('every story line fits on one screen line and every beat is short',()=>{
  for(const beat of Object.values(story.BEATS))for(const seen of [false,true]){const sequence=beat(seen);assert.ok(sequence.length>=1&&sequence.length<=3);lines.push(...sequence);}
  for(const line of lines)assert.ok(line.length<=72,line);
  assert.ok(Object.values(story.STORY_TIMES).every(time=>/^\d\d:\d\d$/.test(time)));
+});
+
+test('Bridge stairs: solid opening, reachable top step, open walkway behind, descent below the kerb lip',()=>{
+ const move=(x,y,dx,dy)=>moveOnPromenade(x,y,dx,dy,BRIDGE_OBSTACLES,BRIDGE_BOUNDS);
+ const top=move(520,614,-300,0);
+ assert.equal(top.x,STAIRS.right+FOOTPRINT.halfWidth);
+ assert.ok(Math.hypot(top.x-STAIRS.entry.x,top.y-STAIRS.entry.y)<STAIRS.entry.radius);
+ assert.equal(move(520,570,-400,0).x,BRIDGE_BOUNDS.minX);
+ assert.equal(move(330,580,0,100).y,STAIRS.back-FOOTPRINT.halfDepth,'no way into the opening from behind');
+ assert.equal(STAIRS.path[0].x,STAIRS.entry.x-10);
+ assert.ok(STAIRS.path.at(-1).y>STAIRS.lip+40&&STAIRS.path.at(-1).x>STAIRS.left);
+ for(let i=1;i<STAIRS.path.length;i++){assert.ok(STAIRS.path[i].x<STAIRS.path[i-1].x);assert.ok(STAIRS.path[i].y>=STAIRS.path[i-1].y);}
+});
+const eminonu=require(join(output,'scenes/eminonuConfig.js'));
+const {withinBoardingReach}=require(join(output,'scenes/boardingConfig.js'));
+test('Eminönü quay: bounds, solid props, the stair exit, the bench wait, Ay and the gangway are all reachable',()=>{
+ const {EMINONU_BOUNDS:B,EMINONU_OBSTACLES:O,EMINONU_STAIRS:S,EMINONU_LOOKS:L,EMINONU_BOARDING:G,AY,ayBox,simitciBox,gorevliBox}=eminonu;
+ const dawn=[...O,ayBox(),simitciBox(),gorevliBox()];
+ const move=(x,y,dx,dy,obstacles=O)=>moveOnPromenade(x,y,dx,dy,obstacles,B);
+ assert.equal(move(900,600,0,-1000).y,B.minY);assert.equal(move(900,600,0,1000).y,B.maxY);
+ assert.equal(move(900,580,-10000,0).x,B.minX);assert.equal(move(1700,600,10000,0).x,B.maxX);
+ for(const box of O.filter(b=>b.id!=='stairwell')){const x=Math.max(B.minX,Math.min(B.maxX,(box.left+box.right)/2));assert.ok(move(x,625,0,-500).y>=Math.max(B.minY,box.bottom+FOOTPRINT.halfDepth),box.id);}
+ assert.equal(move(320,610,-300,0).x,S.right+FOOTPRINT.halfWidth,'stairwell is solid from the quay');
+ const top=S.path.at(-1);
+ for(const box of dawn)assert.ok(!(top.x>box.left-11&&top.x<box.right+11&&top.y>box.top-4&&top.y<box.bottom+4),box.id);
+ for(let i=1;i<S.path.length;i++){assert.ok(S.path[i].x>S.path[i-1].x);assert.ok(S.path[i].y<=S.path[i-1].y);}
+ assert.ok(S.path[0].y>S.lip+40);
+ const bench=move(L.wait.x,620,0,-200);assert.ok(Math.hypot(bench.x-L.wait.x,bench.y-L.wait.y)<L.wait.radius);
+ const boat=move(L.boat.x,620,0,-200);assert.ok(Math.hypot(boat.x-L.boat.x,boat.y-L.boat.y)<L.boat.radius);
+ const ay=move(L.pickUp.x,620,0,-200,dawn);assert.ok(Math.hypot(ay.x-L.pickUp.x,ay.y-L.pickUp.y)<L.pickUp.radius);
+ assert.ok(Math.hypot(ay.x-AY.x,ay.y-AY.y)<AY.revealRange);
+ assert.ok(withinBoardingReach(G.gateX,G.approachY,G)&&!withinBoardingReach(G.gateX,G.approachY));
+ assert.equal(eminonu.clockText(eminonu.WAIT_MINUTES.from),'01:35');assert.equal(eminonu.clockText(eminonu.WAIT_MINUTES.to),'05:50');
 });

@@ -9,16 +9,16 @@ import {Interaction,type LookPoint} from '../systems/Interaction';
 import {Ambience} from '../systems/Ambience';
 import {BridgeMotion} from '../systems/BridgeMotion';
 import {locationCaption} from '../utils/sceneUi';
-import {BRIDGE,BRIDGE_BOUNDS,BRIDGE_OBSTACLES,BRIDGE_LIGHTS,BRIDGE_LOOKS,FISHER_WITNESS,FISH_HEAD,BRIDGE_PAW_TRAIL,BARRIER_CLUE_X,bridgeLight,bridgeLightOrigin} from './galataBridgeConfig';
+import {BRIDGE,BRIDGE_BOUNDS,BRIDGE_OBSTACLES,BRIDGE_LIGHTS,BRIDGE_LOOKS,FISHER_WITNESS,FISH_HEAD,BRIDGE_PAW_TRAIL,STAIRS,bridgeLight,bridgeLightOrigin} from './galataBridgeConfig';
 import {promenadeDepth} from './promenade';
 import {addPawTrail,createClueTextures} from '../assets/clues';
 import {StoryBeat} from '../story/StoryBeat';
-import {BEATS,STORY_TIMES} from '../story/lines';
+import {BEATS,PROMPTS,STORY_TIMES} from '../story/lines';
 import {hasFlag} from '../story/state';
 
 type ScreenLayer={object:Phaser.GameObjects.Components.Transform;x:number;y:number;scaleX:number;scaleY:number};
 
-/** Galata Bridge from Karaköy toward Eminönü; the closed walkway at the far end is the current content boundary. */
+/** Galata Bridge from Karaköy toward Eminönü; the upper walkway is closed at the far end, the stairs lead down to Eminönü. */
 export class GalataBridgeScene extends Phaser.Scene{
  private player!:Player;
  private water!:Water;
@@ -33,8 +33,10 @@ export class GalataBridgeScene extends Phaser.Scene{
  private screenLayers:ScreenLayer[]=[];
  private appliedZoom=1;
  private beats:StoryBeat[]=[];
+ private descending=false;
+ private descentStep=0;
  constructor(){super('GalataBridgeScene');}
- init(data:{from?:string}={}){this.arriving=data.from==='KarakoyScene';this.widening=false;this.widenMix=0;this.appliedZoom=1;}
+ init(data:{from?:string}={}){this.arriving=data.from==='KarakoyScene';this.widening=false;this.widenMix=0;this.appliedZoom=1;this.descending=false;this.descentStep=0;}
  preload(){this.ambience=new Ambience(this);this.ambience.preload();}
  create(){
   document.title='SON VAPUR — Galata Köprüsü';
@@ -49,21 +51,21 @@ export class GalataBridgeScene extends Phaser.Scene{
   this.locals=new BridgeLocals(this);
   this.motion=new BridgeMotion(this);
   this.atmosphere=new Atmosphere(this,{width:BRIDGE.width,lamps:BRIDGE_LIGHTS,texturePrefix:'bridge-',terminalGlow:false,wind:.3});
-  const points:LookPoint[]=BRIDGE_LOOKS.map(point=>point.id==='middle'?{...point,onLook:()=>this.widen()}:point);
+  const points:LookPoint[]=[...BRIDGE_LOOKS.map(point=>point.id==='middle'?{...point,onLook:()=>this.widen()}:point),{...STAIRS.entry,prompt:PROMPTS.stairs,onLook:()=>this.descend()}];
   this.interaction=new Interaction(this,points);
   createClueTextures(this);
   this.add.image(FISH_HEAD.x,FISH_HEAD.y,'clue-fishhead').setOrigin(.5,9/12).setDepth(promenadeDepth(FISH_HEAD.y));
   addPawTrail(this,'bridge-paw-trail',BRIDGE_PAW_TRAIL,10.6,733);
   this.beats=[
    new StoryBeat(this,this.interaction,BEATS.bridgeFisher,p=>Math.abs(p.x-FISHER_WITNESS.x)<FISHER_WITNESS.range,{x:FISHER_WITNESS.x,y:FISHER_WITNESS.y-122}),
-   new StoryBeat(this,this.interaction,()=>BEATS.bridgeBarrier(hasFlag(this,'sawPoster')),p=>p.x<BARRIER_CLUE_X),
+   new StoryBeat(this,this.interaction,()=>BEATS.bridgeStairs(hasFlag(this,'sawPoster')),p=>p.x<STAIRS.clueX),
   ];
   locationCaption(this,'G A L A T A   K Ö P R Ü S Ü',STORY_TIMES.bridge);
   // Vertical margin lets the brief wide view zoom out around the horizon instead of clamping upward.
   this.cameras.main.setZoom(1).setBounds(0,-80,BRIDGE.width,BRIDGE.height+160).setScroll(BRIDGE.width-1280,0);
   this.input.keyboard!.resetKeys();
   this.game.canvas.setAttribute('tabindex','0');
-  this.game.canvas.setAttribute('aria-label','Son Vapur. Galata Bridge toward Eminönü. WASD or arrow keys to walk. E to look over the railing, talk to a fisherman or look out from the middle of the bridge.');
+  this.game.canvas.setAttribute('aria-label','Son Vapur. Galata Bridge toward Eminönü. WASD or arrow keys to walk. E to look over the railing, talk to a fisherman, look out from the middle of the bridge or take the stairs down to Eminönü.');
   this.input.once('pointerdown',()=>this.ambience.start());this.input.keyboard!.once('keydown',()=>this.ambience.start());
   this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>this.ambience.destroy());
   this.screenLayers=this.children.list.map(object=>object as unknown as Phaser.GameObjects.Image).filter(object=>object.scrollFactorX===0&&object.scrollFactorY===0)
@@ -73,7 +75,11 @@ export class GalataBridgeScene extends Phaser.Scene{
  update(_time:number,delta:number){
   if(!this.player)return;const dt=Math.min(delta/1000,.05);
   const target=this.player.boardingTarget;
-  if(target&&Math.hypot(this.player.x-target.x,this.player.y-target.y)<.8){this.player.x=target.x;this.player.y=target.y;this.player.boardingTarget=undefined;this.input.keyboard!.resetKeys();}
+  if(target&&Math.hypot(this.player.x-target.x,this.player.y-target.y)<.8){
+   this.player.x=target.x;this.player.y=target.y;
+   if(this.descending)this.stepDown();
+   else{this.player.boardingTarget=undefined;this.input.keyboard!.resetKeys();}
+  }
   this.player.update(dt);
   const camera=this.cameras.main;
   const follow=Phaser.Math.Clamp(this.player.x-640,0,BRIDGE.width-1280);
@@ -81,6 +87,19 @@ export class GalataBridgeScene extends Phaser.Scene{
   this.holdScreenLayers();
   this.water.update(dt,camera.scrollX);this.atmosphere.update(dt);this.motion.update(dt);this.locals.update(dt,this.motion.gust);
   if(!this.player.boardingTarget){for(const beat of this.beats)beat.update(this.player);this.interaction.update(this.player);}
+ }
+ /** Down the stairs on the shared authored-path walk; the kerb lip hides the traveller as the view fades. */
+ private descend(){
+  if(this.descending)return;this.descending=true;this.descentStep=0;
+  this.interaction.hide();this.player.boardingTarget=STAIRS.path[0];
+ }
+ private stepDown(){
+  this.descentStep++;
+  if(this.descentStep===STAIRS.fadeFromStep){
+   this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,()=>this.scene.start('EminonuScene',{from:'GalataBridgeScene'}));
+   this.cameras.main.fadeOut(1100,8,21,30);
+  }
+  this.player.boardingTarget=STAIRS.path[Math.min(this.descentStep,STAIRS.path.length-1)];
  }
  /** From the opening span, the view briefly widens to hold both shores, then settles back. */
  private widen(){

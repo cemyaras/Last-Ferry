@@ -1,0 +1,97 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>SON VAPUR — Eminönü and ending checks</title><style>#checks{position:fixed;z-index:100;top:0;left:0;background:#091b25db;padding:8px;color:#dbd6b9;font:11px monospace;max-width:520px}button{padding:6px}#results{white-space:pre-wrap}</style></head><body><main id="game"></main><aside id="checks"><button id="stairs">Bridge stairs → Eminönü</button><button id="open">Open Eminönü</button><button id="run" disabled>Run ending checks</button><button id="dawn" disabled>Skip to dawn</button><button id="morning">Open Kadıköy morning</button><div id="results">Ready.</div></aside><script type="module">
+import {game} from '../src/main.ts';
+import {STAIRS} from '../src/scenes/galataBridgeConfig.ts';
+import {EMINONU_BOUNDS,EMINONU_BOARDING,EMINONU_STAIRS,EMINONU_LOOKS,FERRY_OFFSCREEN_X,SIMITCI,AY} from '../src/scenes/eminonuConfig.ts';
+import {DEFNE} from '../src/scenes/KadikoyDawnScene.ts';
+window.game=game;
+const output=document.querySelector('#results'),results=[];
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const keys={a:['a','KeyA',65],d:['d','KeyD',68],w:['w','KeyW',87],s:['s','KeyS',83],e:['e','KeyE',69]};
+function key(type,name){const [key,code,keyCode]=keys[name];window.dispatchEvent(new KeyboardEvent(type,{key,code,keyCode,which:keyCode,bubbles:true}));}
+async function hold(name,ms){key('keydown',name);await wait(ms);key('keyup',name);await wait(240);}
+function check(ok,label){results.push((ok?'PASS ':'FAIL ')+label);output.textContent=results.join('\n');if(!ok)throw new Error(label);}
+const until=async(predicate,label,limit=15000)=>{const end=performance.now()+limit;while(!predicate()){if(performance.now()>end)throw new Error('Timeout: '+label);await wait(80);}};
+const releaseAll=()=>{for(const k of Object.keys(keys))key('keyup',k);};
+function place(scene,x,y){const p=scene.player;releaseAll();p.x=x;p.y=y;p.velocity=0;p.velocityY=0;p.update(0);}
+const only=name=>{for(const s of game.scene.getScenes(true))game.scene.stop(s.scene.key);game.scene.start(name);};
+const enable=()=>{document.querySelectorAll('#run,#dawn').forEach(b=>b.disabled=false);};
+document.querySelector('#open').onclick=async()=>{only('EminonuScene');await wait(400);enable();output.textContent='Eminönü open.';};
+document.querySelector('#morning').onclick=async()=>{only('KadikoyDawnScene');output.textContent='Kadıköy morning open.';};
+document.querySelector('#dawn').onclick=async()=>{const s=game.scene.getScene('EminonuScene');place(s,1086,570);s.wait();};
+document.querySelector('#stairs').onclick=async()=>{
+ document.querySelectorAll('button').forEach(b=>b.disabled=true);
+ try{
+  only('GalataBridgeScene');await wait(500);
+  const b=game.scene.getScene('GalataBridgeScene'),bp=b.player;
+  place(b,560,612);b.cameras.main.scrollX=0;await wait(200);await until(()=>!b.interaction.busy,'bridge lines');
+  await hold('a',1600);check(bp.x===STAIRS.right+11,'Stairwell footprint stops the traveller at its top step');
+  await until(()=>b.beats[1].done,'stairs beat',20000);check(true,'Paw prints down the stairs are noticed on approach');
+  await until(()=>!b.interaction.busy,'stairs line');await wait(350);
+  check(b.interaction.prompt.alpha>.9&&b.interaction.prompt.text==='[E]  Aşağı in','Stairs offer [E] Aşağı in');
+  place(b,560,570);await hold('a',3800);check(bp.x<STAIRS.left&&bp.y===570,'Walkway behind the stairwell stays open to the barrier');
+  place(b,440,614);await wait(350);await hold('e',60);check(b.descending&&bp.boardingTarget,'E starts the walk down the stairs');
+  await until(()=>bp.y>650,'descent',6000);check(bp.visual.depth<b.children.list.find(o=>o.texture?.key==='galata-stairlip').depth,'Kerb lip hides the traveller going down');
+  await until(()=>game.scene.isActive('EminonuScene'),'Eminönü transition',8000);await wait(150);
+  const s=game.scene.getScene('EminonuScene'),p=s.player;
+  check(game.scene.getScenes(true).length===1,'Only Eminönü remains active');
+  check(p.boardingTarget&&p.y>=640,'Traveller comes up the stairs at Eminönü');
+  await until(()=>!p.boardingTarget,'ascent',8000);await wait(150);
+  const top=EMINONU_STAIRS.path.at(-1);check(p.x===top.x&&p.y===top.y,'Ascent ends on the quay with controls back');
+  const x=p.x;await hold('d',500);check(p.x>x+30,'Walking works after the stairs');
+  enable();output.textContent+='\nCOMPLETE — stairs checks passed.';
+ }catch(e){output.textContent+='\nERROR '+e.message;}finally{releaseAll();document.querySelectorAll('#stairs,#open,#morning').forEach(b=>b.disabled=false);}
+};
+document.querySelector('#run').onclick=async()=>{
+ document.querySelectorAll('button').forEach(b=>b.disabled=true);results.length=0;
+ try{
+  const s=game.scene.getScene('EminonuScene'),p=s.player;
+  check(s.clock.text==='01:35'&&s.dawn.progress===0,'Night: the clock reads 01:35 and the sky is dark');
+  check(s.boarding.ferry.x===FERRY_OFFSCREEN_X&&!s.boarding.enabled&&!s.ay.visible,'Pier is empty, the gate is shut and Ay is not seen');
+  place(s,320,600);await hold('a',1200);check(p.x===EMINONU_STAIRS.right+11,'Stairwell is solid from the quay');
+  place(s,320,580);await hold('a',3000);check(p.x===EMINONU_BOUNDS.minX,'Quay is open behind the stairwell to the left edge');
+  place(s,700,600);await hold('w',1600);check(p.y===EMINONU_BOUNDS.minY,'Railing edge holds');
+  place(s,1800,600);await hold('w',1600);check(p.y===530,'Terminal building is solid');
+  place(s,1840,600);await hold('d',900);check(p.x===EMINONU_BOUNDS.maxX,'Right edge holds');
+  place(s,1090,600);await hold('w',1600);check(p.y===552,'Bench blocks from the front');
+  place(s,1090,524);await wait(150);check(p.visual.depth<s.children.getByName('eminonu-bench').depth,'Traveller behind the bench is occluded');
+  place(s,660,530);await until(()=>!s.interaction.busy,'quiet');await wait(350);await hold('e',60);await wait(900);check(s.interaction.quote.text.includes('balık ekmek'),'Balık ekmek boat look displays');
+  await until(()=>!s.interaction.busy,'boat line',12000);
+  place(s,1150,600);await hold('d',800);await until(()=>s.gateBeat.done,'gate beat',4000);check(true,'Reaching the gate notices the prints going under it');
+  await until(()=>!s.interaction.busy,'gate line',12000);
+  place(s,1086,570);await wait(400);check(s.interaction.prompt.text==='[E]  Bekle'&&s.interaction.prompt.alpha>.9,'Bench offers [E] Bekle');
+  await hold('e',60);check(s.phase==='waiting'&&p.boardingTarget,'Waiting holds the traveller while the night passes');
+  const x=p.x;await hold('d',600);check(Math.abs(p.x-x)<1,'Controls are paused during the wait');
+  await until(()=>s.phase==='dawn',"dawn",22000);
+  check(s.clock.text==='05:50','Clock reaches 05:50');
+  check(s.dawn.progress===1&&s.atmosphere.daylight===1,'Dawn sky is up, lamps are off and the rain has stopped');
+  check(Math.abs(s.boarding.ferry.x-EMINONU_BOARDING.ferryX)<1&&s.gate.scaleX<.2,'First ferry has docked and the gate is open');
+  check(s.ay.visible&&Math.abs(s.simitci.x-SIMITCI.x)<1,'Ay is seen for the first time; the simitçi has arrived');
+  check(s.dawn.moonAlpha>.3,'The pale moon is still in the sky');
+  check(!p.boardingTarget,'Controls return at dawn');
+  place(s,AY.x-120,560);await until(()=>s.phase==='revealed','reveal',4000);check(true,'Approaching Ay plays the reveal');
+  await wait(3800);check(s.dawn.moonAlpha<.02,'The moon leaves the sky as Ay is found');
+  await until(()=>!s.interaction.busy,'reveal lines',12000);
+  place(s,EMINONU_LOOKS.pickUp.x,EMINONU_LOOKS.pickUp.y);await wait(400);check(s.interaction.prompt.text==='[E]  Kucakla','Ay offers [E] Kucakla');
+  check(Math.abs(p.x-AY.x)>30,'Traveller stands beside Ay, not in front of her');
+  await hold('e',60);check(s.phase==='carrying'&&s.ay.held,'Ay is carried');
+  await until(()=>s.boarding.enabled,'pick-up line',8000);
+  place(s,EMINONU_BOARDING.gateX-30,EMINONU_BOARDING.approachY);await wait(400);
+  check(s.boarding.prompt.alpha>.9&&s.boarding.prompt.text==='[E]  Kadıköy vapuruna bin','Gate offers the Kadıköy ferry');
+  await hold('e',60);check(s.boarding.state==='boarding','E boards the first ferry');
+  await until(()=>game.scene.isActive('KadikoyDawnScene'),'Kadıköy transition',12000);await wait(150);
+  const k=game.scene.getScene('KadikoyDawnScene'),kp=k.player;
+  check(game.scene.getScenes(true).length===1,'Only Kadıköy morning remains active');
+  check(kp.boardingTarget&&k.ay.held,'Traveller steps off the ferry with Ay');
+  await until(()=>!kp.boardingTarget,'disembark',8000);
+  check(kp.x===550&&kp.y===559,'Gangway walk ends on the quay');
+  key('keydown','d');await until(()=>kp.x>=DEFNE.x-230,'walk to Defne',20000);key('keyup','d');
+  await until(()=>k.noticeBeat.done,'Defne notices',4000);check(true,'Defne sees Ay');
+  await until(()=>!k.interaction.busy,'notice line',8000);
+  key('keydown','d');await until(()=>kp.x>=DEFNE.x-40||kp.velocity===0&&kp.x>DEFNE.x-60,'reach Defne',6000);key('keyup','d');await wait(400);
+  check(k.interaction.prompt.text==='[E]  Ver'&&k.interaction.prompt.alpha>.9,'Defne offers [E] Ver');
+  await hold('e',60);check(k.given&&!k.ay.held&&k.defne.texture.key==='defne-ay','Ay goes home to Defne');
+  await until(()=>k.children.getByName('closing')?.alpha>.95,'closing card',25000);check(true,'Closing card appears');
+  output.textContent+='\nCOMPLETE — all ending checks passed.';
+ }catch(e){output.textContent+='\nERROR '+e.message;}finally{releaseAll();document.querySelectorAll('#stairs,#open,#morning').forEach(b=>b.disabled=false);}
+};
+</script></body></html>

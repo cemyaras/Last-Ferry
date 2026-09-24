@@ -90,10 +90,10 @@ export function mosque(c:Ctx,x:number,y:number,s:number){c.save();c.translate(x,
  for(let wx=-30;wx<=30;wx+=12){c.fillStyle='#d4b17643';c.fillRect(wx,-42,3,7);}
  c.restore();}
 function dome(c:Ctx,x:number,y:number,r:number,color:string){c.fillStyle=color;c.beginPath();c.ellipse(x,y,r,r*.82,0,Math.PI,Math.PI*2);c.fill();line(c,x-r,y,x+r,y,'#54616640');}
-function railing(c:Ctx,start:number,end:number){
- for(let x=start;x<end;x+=48){if(x>BOARDING.gateLeft&&x<BOARDING.gateRight)continue;line(c,x,460,x,504,'#0b1b24',4);line(c,x+1,460,x+1,502,'#586b704b',1);ellipse(c,x,458,3,2,'#617273');}
- for(const [a,b] of [[start,BOARDING.gateLeft],[BOARDING.gateRight,end]]){line(c,a,459,b,459,'#0b1b24',5);line(c,a,457,b,457,'#74848780',1);line(c,a,483,b,483,'#11262e',3);}
- for(let x=start;x<end;x+=96){if(x<BOARDING.gateRight&&x+48>BOARDING.gateLeft)continue;line(c,x,466,x+48,492,'#243942',1);line(c,x+48,466,x,492,'#243942',1);}
+export function railing(c:Ctx,start:number,end:number,gateLeft=BOARDING.gateLeft,gateRight=BOARDING.gateRight){
+ for(let x=start;x<end;x+=48){if(x>gateLeft&&x<gateRight)continue;line(c,x,460,x,504,'#0b1b24',4);line(c,x+1,460,x+1,502,'#586b704b',1);ellipse(c,x,458,3,2,'#617273');}
+ for(const [a,b] of [[start,gateLeft],[gateRight,end]]){line(c,a,459,b,459,'#0b1b24',5);line(c,a,457,b,457,'#74848780',1);line(c,a,483,b,483,'#11262e',3);}
+ for(let x=start;x<end;x+=96){if(x<gateRight&&x+48>gateLeft)continue;line(c,x,466,x+48,492,'#243942',1);line(c,x+48,466,x,492,'#243942',1);}
 }
 function terminal(c:Ctx){
  // Old pier pavilion: tiled roof, clerestory, stone pilasters and lit arched doors.

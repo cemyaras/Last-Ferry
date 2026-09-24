@@ -1,22 +1,25 @@
 import Phaser from 'phaser';
 import {texture,polygon,line,ellipse,label,glow} from '../utils/drawing';
 import {createFerryTexture} from './ferry';
-import {BOARDING as B} from '../scenes/boardingConfig';
+import {BOARDING,type BoardingLayout} from '../scenes/boardingConfig';
 
-/** The Karaköy-bound ferry, shared by its Kadıköy mooring and its Karaköy arrival. */
-export function createMooredFerryTexture(scene:Phaser.Scene){
+/** A moored ferry with one open side door and its route name on the hull. */
+export function createMooredFerryTexture(scene:Phaser.Scene,key='karakoy-ferry',route='KARAKÖY'){
  createFerryTexture(scene);
- texture(scene,'karakoy-ferry',400,160,c=>{
+ texture(scene,key,400,160,c=>{
   c.drawImage(scene.textures.get('ferry').getSourceImage() as HTMLCanvasElement,0,0);
   // One open side door, retaining the existing classic ferry silhouette.
   c.fillStyle='#162b31';c.fillRect(95,80,23,43);
   const light=c.createLinearGradient(95,0,118,0);light.addColorStop(0,'#ac955b');light.addColorStop(1,'#34423c');
   c.fillStyle=light;c.fillRect(98,83,17,39);line(c,97,81,97,123,'#dfc48b',1);
-  line(c,95,123,119,123,'#d1c19b',2);c.fillStyle='#8d9587';c.fillRect(156,110,90,12);label(c,'KARAKÖY',160,118,7,'#203b3d','sans-serif',1);
+  line(c,95,123,119,123,'#d1c19b',2);c.fillStyle='#8d9587';c.fillRect(156,110,90,12);label(c,route,160,118,7,'#203b3d','sans-serif',1);
  });
 }
-export function createBoardingArt(scene:Phaser.Scene){
- createMooredFerryTexture(scene);
+export interface BoardingArtOptions{ferryKey:string;route:string;sign:string;signKey:string;}
+const KADIKOY_ART:BoardingArtOptions={ferryKey:'karakoy-ferry',route:'KARAKÖY',sign:'KARAKÖY',signKey:'boarding-sign'};
+/** Gangway, sign, light and moored ferry around a boarding gate; the ramp art is relative to the gate. */
+export function createBoardingArt(scene:Phaser.Scene,B:BoardingLayout=BOARDING,art:BoardingArtOptions=KADIKOY_ART){
+ createMooredFerryTexture(scene,art.ferryKey,art.route);
  texture(scene,'boarding-ramp',135,158,c=>{
   c.translate(-B.gateX+50,-B.deckY+8);
   polygon(c,[[B.cabinX-11,447],[B.cabinX+11,447],[B.gateX+25,525],[B.gateX-25,525]],'#273b40','#78817a');
@@ -28,18 +31,18 @@ export function createBoardingArt(scene:Phaser.Scene){
   }
   line(c,B.gateX-25,525,B.gateX+25,525,'#c0af7c',2);
  });
- texture(scene,'boarding-sign',150,90,c=>{
+ texture(scene,art.signKey,150,90,c=>{
   line(c,18,25,18,89,'#102631',4);line(c,135,25,135,89,'#102631',4);
   polygon(c,[[2,2],[148,2],[148,49],[2,49]],'#132a32','#768577');
-  label(c,'KARAKÖY',28,21,13,'#d0c6a2','Georgia',1.3);label(c,'VAPURA BİNİŞ  →',17,38,8,'#9daea5','sans-serif',.8);
+  label(c,art.sign,28,21,13,'#d0c6a2','Georgia',1.3);label(c,'VAPURA BİNİŞ  →',17,38,8,'#9daea5','sans-serif',.8);
  });
  texture(scene,'boarding-light',200,160,c=>{c.save();c.scale(1,.4);glow(c,100,220,95,'#d4b76e24');c.restore();});
- const ferry=scene.add.image(B.ferryX,B.ferryY,'karakoy-ferry').setOrigin(.5,1).setDepth(7).setTint(0xc5cec0);
+ const ferry=scene.add.image(B.ferryX,B.ferryY,art.ferryKey).setOrigin(.5,1).setDepth(7).setTint(0xc5cec0);
  scene.add.image(B.gateX-50,B.deckY-8,'boarding-ramp').setOrigin(0).setDepth(11);
  // Left of the bridge, so the sign points to its actual entrance.
- scene.add.image(368,426,'boarding-sign').setOrigin(0).setDepth(17.6);
+ scene.add.image(B.gateX-182,426,art.signKey).setOrigin(0).setDepth(17.6);
  scene.add.image(B.gateX,516,'boarding-light').setDepth(13);
- // Mooring line, kept behind the ramp and traveller.
- const ropes=scene.add.graphics().setDepth(8);ropes.lineStyle(1,0x8a8a69,.5);ropes.lineBetween(472,475,487,504);ropes.lineBetween(817,475,805,503);
- return ferry;
+ // Mooring lines, kept behind the ramp and traveller.
+ const ropes=scene.add.graphics().setDepth(8);ropes.lineStyle(1,0x8a8a69,.5);ropes.lineBetween(B.gateX-78,475,B.gateX-63,504);ropes.lineBetween(B.gateX+267,475,B.gateX+255,503);
+ return {ferry,ropes};
 }

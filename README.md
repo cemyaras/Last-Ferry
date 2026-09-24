@@ -2,7 +2,7 @@
 
 🎮 **[Play on GitHub Pages](https://cemyaras.github.io/Last-Ferry/)**
 
-A small atmospheric journey from Kadıköy ferry pier through a Bosphorus crossing to the first Karaköy lane and onto Galata Bridge, at night. Built with TypeScript, Phaser 3 and Vite. Opens directly into the scene, with no menus or external assets.
+A small atmospheric journey from Kadıköy ferry pier through a Bosphorus crossing, a Karaköy lane and Galata Bridge to Eminönü at dawn, and home again. Built with TypeScript, Phaser 3 and Vite. Opens directly into the scene, with no menus or external assets.
 
 ## 🏃‍♂️ Run
 
@@ -18,6 +18,8 @@ Open the localhost URL printed by Vite. Click the scene if the browser has not g
 - **E** near the bench — look out over the water
 - **E** at the left-side boarding bridge — board the Karaköy ferry
 - **E** at the left end of the Karaköy lane — walk onto Galata Bridge
+- **E** at the stairs by the closed bridge walkway — go down to Eminönü
+- **E** on the Eminönü bench — wait for the first ferry
 
 You begin at the right end of the promenade, facing left toward the ferry terminal. Follow the left-pointing İSKELE sign; the original bench reflection remains available along the way. Walk left to the terminal and approach the bridge marked KARAKÖY. Press E to walk aboard the waiting ferry. Boarding fades into the playable FerryScene. Explore its open deck with the same controls and look out at the water. After a 30-second cruise, the Karaköy waterfront emerges during a 14-second approach, followed by four seconds of docking. When “Karaköy’e yanaştık.” appears, use E at the right-hand exit to step ashore. The small Karaköy lane remains freely explorable up to its closed uphill gate; at its left end, past the terminal, a lamp plate points to Galata Bridge. Reload the page to replay from Kadıköy. The continuous pier is 2112 pixels wide (1.65 screens), with a gently following camera and depth-dependent parallax. Feet stay within a 106-pixel promenade depth band; depth movement is slower and diagonals are normalized. The terminal, rail edge and furniture have solid footprints. Furniture and the traveller sort by ground contact Y, while the camera remains horizontal. The scene is designed for desktop keyboards and scales to fit the window with cinematic letterboxing. Movement guidance fades after walking; the clock and terminal sign share the fixed 23:40 scene time.
 
@@ -38,6 +40,13 @@ npm run preview
 - `src/assets/galataBridge.ts` — skylines, railing, walkway, opening span, barrier and tram road art
 - `src/entities/BridgeLocals.ts` — three fishermen, an umbrella pedestrian, rods and lines
 - `src/systems/BridgeMotion.ts` — tram, car lights, flag, far ferry, circling gulls and barrier lamps
+- `src/assets/stairs.ts` — shared stair opening whose near lip hides anyone walking the stairs
+- `src/scenes/EminonuScene.ts` — Eminönü quay from night to dawn: the wait, the first ferry, Ay and boarding
+- `src/scenes/eminonuConfig.ts` — quay bounds, footprints, lamps, stairs, gangway, wait minutes and story positions
+- `src/assets/eminonu.ts` — Karaköy across the water, receding bridge, balık ekmek boat, terminal with clock, gate and figures
+- `src/systems/Dawn.ts` — dawn sky, pale setting moon and warm water light over the shared night sky
+- `src/entities/StoryCharacters.ts` — Ay (sitting, looking, carried) and Defne
+- `src/scenes/KadikoyDawnScene.ts` — Kadıköy in the morning, the hand-over and the closing card
 - `src/systems/FerryJourney.ts` — active-time cruise, smooth approach and docking phases
 - `src/scenes/ferryConfig.ts` — deck bounds, footprints, lights and crossing duration
 - `src/scenes/config.ts` — dimensions, movement bounds, interaction position, lamps, shared scene time and parallax
@@ -62,13 +71,17 @@ The arrival has one quiet, procedurally synthesized two-tone ferry horn. Audio u
 
 ## 🌙 Hikâye: "Kayıp: Ay"
 
-Yıllar sonra İstanbul'a dönen bir yolcu, Kadıköy'de bir lamba direğine asılmış çocuk yazısıyla bir ilan görür: "KAYIP: AY. Her gece çıkıp gidiyor." Önce gökteki ayı sanır. Vapurda bir yolcu "beyaz bir şeyin" atladığını söyler ve bankın altında boş bir süt bardağı durur. Karaköy'de iskelede bekleyen adam beyaz bir kedinin her gece son vapurdan indiğini anlatır; saatçinin önünde boş bir mama kabı ve köprüye giden pati izleri vardır. Köprüde balıkçı her gece ona balık attığını söyler, izler bakım bariyerinin altından Eminönü'ye geçer. Ay finale kadar görünmez; Eminönü ve şafak sahnesi henüz yapılmadı.
+Yıllar sonra İstanbul'a dönen bir yolcu, Kadıköy'de bir lamba direğine asılmış çocuk yazısıyla bir ilan görür: "KAYIP: AY. Her gece çıkıp gidiyor." Önce gökteki ayı sanır. Vapurda bir yolcu "beyaz bir şeyin" atladığını söyler ve bankın altında boş bir süt bardağı durur. Karaköy'de iskelede bekleyen adam beyaz bir kedinin her gece son vapurdan indiğini anlatır; saatçinin önünde boş bir mama kabı ve köprüye giden pati izleri vardır. Köprüde balıkçı her gece ona balık attığını söyler, izler bakım bariyerinin altından Eminönü'ye geçer. Bakım bariyerinin önündeki merdivenden alt kata inilir; iz oradan Eminönü'ye gider.
 
 Kilit anlar kaçırılamaz ama kendiliğinden gelir: yolcu yanından geçerken kısa bir satır sekansı oynar, konuşan kişinin üstünde "···" belirir. Çıkışlar hiçbir zaman kilitlenmez. İç ses tırnak içinde, konuşmalar tire ile gösterilir. Ekrandaki saat gecenin ilerleyişini izler: 23:40, 23:55, 00:20, 01:10. Tüm metin `src/story/lines.ts` dosyasında; `src/story/StoryBeat.ts` tek seferlik anları, `src/story/state.ts` ilanın okunup okunmadığını tutar (yalnızca satır varyasyonu için, arayüzü yok). İpucu çizimleri `src/assets/clues.ts` içindedir.
 
+### Eminönü ve sabah
+
+Yolcu merdivenden Eminönü rıhtımına çıkar (01:35). İzler kapalı iskele kapısının altından geçer. Banktaki **[E] Bekle** ile gece geçer: saat 05:50'ye akar, gökyüzü sağda Boğaz üzerinde ağarır, yağmur diner, lambalar söner, simitçi gelir ve ilk vapur yanaşır. Görevli kapıyı açar ve Ay ilk kez görünür: beyaz, bir kulağı kara. Yolcu yaklaştığında gökteki ay da solup kaybolur. **[E] Kucakla** ile Ay'ı alır ve Kadıköy vapuruna biner. Kadıköy'de sabah (06:25) ay artık gökte yoktur; Defne ilanıyla lambanın yanında bekler. **[E] Ver** ile Ay eve döner ve sessiz bir kapanış kartı gelir. `Atmosphere.daylight` ve `Dawn` yalnızca bu iki sahnede kullanılır; önceki sahneler değişmez. `/tests/eminonu.html` merdiven inişini, gece–şafak geçişini, kilit anları ve kapanışı uçtan uca sınar.
+
 ## 🎯 Scope
 
-Kadıköy pier, one compact ferry deck, a 1920-pixel (1.5-screen) Karaköy lane and a 2176-pixel (1.7-screen) stretch of Galata Bridge. The deck has two passengers; the street has a waiting resident and a shopkeeper; the bridge has three fishermen and one pedestrian. Each location offers at most three brief observations. Eminönü is not built yet. No quests, inventory, saves, combat, menus or dialogue trees.
+Kadıköy pier, one compact ferry deck, a 1920-pixel (1.5-screen) Karaköy lane, a 2176-pixel (1.7-screen) stretch of Galata Bridge, a 1920-pixel Eminönü quay and Kadıköy again in the morning. The deck has two passengers; the street has a waiting resident and a shopkeeper; the bridge has three fishermen and one pedestrian; Eminönü has a pier attendant and a simitçi. Each location offers at most three brief interactions besides its exits. No quests, inventory, saves, combat, menus or dialogue trees.
 
 ## 🧪 Browser verification
 

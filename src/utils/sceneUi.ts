@@ -3,7 +3,7 @@ import {SCENE_TIME} from '../scenes/config';
 
 /** Shared typography and safe placement for the existing scenes. */
 export function locationCaption(scene:Phaser.Scene,label:string,time=SCENE_TIME){
- scene.add.text(49,650,time,{fontFamily:'Georgia, serif',fontSize:'25px',color:'#d6d4c2'}).setDepth(60).setScrollFactor(0);
+ scene.add.text(49,650,time,{fontFamily:'Georgia, serif',fontSize:'25px',color:'#d6d4c2'}).setDepth(60).setScrollFactor(0).setName('scene-clock');
  return scene.add.text(50,684,label,{fontFamily:'Arial, sans-serif',fontSize:'10px',color:'#99abae'}).setDepth(60).setScrollFactor(0);
 }
 /** Shows lines one after another in the same screen-fixed text; each holds longer the longer it is. */

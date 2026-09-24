@@ -80,6 +80,16 @@ document.querySelector('#run').onclick=async()=>{
   await waitUntil(()=>!walker.boardingTarget,'bridge walk-in',5000);
   await walkTo(walker,1780);await depthTo(walker,524);await hold('e','KeyE',69,60);await wait(950);
   check(bridge.interaction.quote.text.includes('Karşı kıyı'),'Bridge railing look works after three transitions');
+  await waitUntil(()=>!bridge.interaction.busy,'railing line',15000);
+  await depthTo(walker,614);await walkTo(walker,440,30000);await waitUntil(()=>bridge.beats[1].done,'stairs beat',25000);
+  await waitUntil(()=>!bridge.interaction.busy,'stairs line',15000);await wait(350);
+  check(bridge.interaction.prompt.text==='[E]  Aşağı in','Stairs down to Eminönü are offered');
+  await hold('e','KeyE',69,60);
+  await waitUntil(()=>game.scene.isActive('EminonuScene'),'Eminönü transition',9000);
+  const quay=game.scene.getScene('EminonuScene');
+  check(game.scene.getScenes(true).length===1,'Only Eminönü remains active');
+  await waitUntil(()=>!quay.player.boardingTarget,'ascent',9000);
+  check(quay.clock.text==='01:35'&&quay.phase==='night','Eminönü opens at night after four transitions');
   output.textContent+='\nCOMPLETE — all journey checks passed.';
  }catch(error){output.textContent+='\nERROR '+error.message;}finally{for(const [k,c,n] of [['a','KeyA',65],['d','KeyD',68],['w','KeyW',87],['s','KeyS',83],['e','KeyE',69],['ArrowLeft','ArrowLeft',37]])key('keyup',k,c,n);}
 };

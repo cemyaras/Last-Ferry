@@ -28,6 +28,7 @@ export const BRIDGE_PROPS:BridgeProp[]=[
  {id:'bridge-bench',kind:'bench',x:1196,y:539},
 ];
 const box=(id:string,left:number,right:number,top:number,bottom:number):Obstacle=>({id,left,right,top,bottom});
+const STAIRS_LEFT=250,STAIRS_RIGHT=412;
 export const BRIDGE_OBSTACLES:Obstacle[]=[
  ...BRIDGE_LIGHTS.map(({x},i)=>box(`bridge-lamp-${i}`,x-9,x+9,510,520)),
  box('fisher-eminonu',306,330,522,536),
@@ -39,6 +40,8 @@ export const BRIDGE_OBSTACLES:Obstacle[]=[
  box('tackle-box',1585,1615,541,553),
  box('bridge-bench',1185,1300,532,548),
  box('eminonu-barrier',-100,206,0,720),
+ box('stairwell',STAIRS_LEFT,STAIRS_RIGHT,598,700),
+ box('stair-sign',412,420,594,600),
 ];
 /** Barrier panels across the walkway, sorted by their own ground contact. */
 export const BARRIER_PANELS=[{x:168,y:531},{x:160,y:575},{x:152,y:620}];
@@ -52,5 +55,8 @@ export function bridgeLightOrigin(x:number){return BRIDGE_LIGHTS.reduce((a,b)=>M
 /** Story clues: the fisherman who feeds Ay, a fish head left behind, and prints passing under the barrier. */
 export const FISHER_WITNESS={x:656,y:548,range:110};
 export const FISH_HEAD={x:604,y:590};
-export const BRIDGE_PAW_TRAIL=[[590,594],[420,600],[240,606],[120,610],[20,612]] as const;
-export const BARRIER_CLUE_X=330;
+export const BRIDGE_PAW_TRAIL=[[590,594],[520,604],[460,612],[420,616],[392,622],[362,636]] as const;
+/** Stairs down to the lower level open beside the kerb, just before the closed walkway.
+ * The top step is at the right; the descent walks left and down until the kerb lip hides the traveller. */
+export const STAIRS={left:STAIRS_LEFT,right:STAIRS_RIGHT,back:598,lip:646,entry:{x:446,y:614,radius:34},clueX:520,
+ path:[{x:436,y:614},{x:404,y:618},{x:352,y:642},{x:306,y:670},{x:266,y:700}],fadeFromStep:3};
